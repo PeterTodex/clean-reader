@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 247 245 240;
+    --foreground: 38 34 28;
+  }
+
+  body {
+    @apply antialiased font-sans text-stone-800 bg-[#faf8f5] selection:bg-amber-200 selection:text-amber-900;
+  }
+}
+
+/* Reader Themes */
+.theme-parchment {
+  background-color: #f7f3e8;
+  color: #382e21;
+}
+.theme-parchment .reader-border {
+  border-color: #e5dbc7;
+}
+
+.theme-eyecare {
+  background-color: #e9f2e8;
+  color: #1a331c;
+}
+.theme-eyecare .reader-border {
+  border-color: #cbe0cb;
+}
+
+.theme-white {
+  background-color: #ffffff;
+  color: #1e293b;
+}
+.theme-white .reader-border {
+  border-color: #e2e8f0;
+}
+
+.theme-eink {
+  background-color: #eeeeee;
+  color: #111111;
+}
+.theme-eink .reader-border {
+  border-color: #d1d5db;
+}
+
+.theme-dark {
+  background-color: #18191c;
+  color: #cfd4dc;
+}
+.theme-dark .reader-border {
+  border-color: #2b2e34;
+}
+
+.theme-oled {
+  background-color: #000000;
+  color: #9ca3af;
+}
+.theme-oled .reader-border {
+  border-color: #1f2937;
+}
+
+/* Typography styles for novel reader content */
+.reader-content {
+  text-align: justify;
+  text-justify: inter-ideograph;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.reader-content p {
+  text-indent: 2em;
+  margin-bottom: 1.25em;
+  letter-spacing: 0.02em;
+}
+
+/* Seamless inline character replacement images */
+.inline-char-img {
+  display: inline-block;
+  vertical-align: -0.18em;
+  height: 1.12em;
+  width: auto;
+  margin: 0 1px;
+  filter: contrast(1.1);
+}
+
+/* In dark/oled theme, invert inline char images if needed */
+.theme-dark .inline-char-img,
+.theme-oled .inline-char-img {
+  filter: invert(0.85) hue-rotate(180deg);
+}
+
+/* Smooth custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 150, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 150, 150, 0.45);
+}
