@@ -23,7 +23,7 @@ export interface ReaderSettings {
 }
 
 export const DEFAULT_READER_SETTINGS: ReaderSettings = {
-  theme: 'parchment',
+  theme: 'white',
   fontSize: 20,
   lineHeight: 1.85,
   fontFamily: 'serif',

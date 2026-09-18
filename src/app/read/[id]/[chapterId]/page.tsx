@@ -71,36 +71,36 @@ export default function ReaderPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f7f3e8] text-stone-700">
-        <div className="w-10 h-10 border-3 border-amber-800 border-t-transparent rounded-full animate-spin mb-4" />
-        <h3 className="font-serif font-medium text-base mb-1">正在净化排版并加载正文...</h3>
-        <p className="text-xs text-stone-500">已自动过滤广告与弹窗，无感拼接分段</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafafa] text-zinc-800">
+        <div className="w-9 h-9 border-2 border-black border-t-transparent rounded-full animate-spin mb-3" />
+        <h3 className="font-bold text-sm mb-1 tracking-tight">正在净化排版并加载正文...</h3>
+        <p className="text-xs text-zinc-400 font-mono">AD-FREE FILTERING · AUTO STITCHING</p>
       </div>
     );
   }
 
   if (error || !chapter) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#f7f3e8] text-stone-800">
-        <div className="max-w-md w-full bg-white p-6 rounded-2xl shadow-md border border-stone-200 text-center space-y-4">
-          <div className="w-12 h-12 mx-auto rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-xl">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#fafafa] text-zinc-900">
+        <div className="max-w-md w-full bg-white p-6 rounded-xl shadow-sm border border-zinc-200 text-center space-y-4">
+          <div className="w-10 h-10 mx-auto rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-base">
             !
           </div>
-          <h3 className="font-bold text-lg text-stone-900">章节加载失败</h3>
-          <p className="text-xs text-stone-500 leading-relaxed">
+          <h3 className="font-bold text-base text-zinc-900">章节加载失败</h3>
+          <p className="text-xs text-zinc-500 leading-relaxed font-mono">
             {error || '章节内容不存在或源站线路受限'}
           </p>
           <div className="pt-2 flex items-center justify-center gap-3">
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-amber-800 text-white hover:bg-amber-900 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
+              className="px-4 py-2 bg-black text-white hover:bg-zinc-800 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               重试本章
             </button>
             <Link
               href={`/book/${bookId}?source=${sourceId}`}
-              className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
+              className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors border border-zinc-200"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               返回目录

@@ -10,19 +10,14 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onSearchFocus }) => {
   return (
-    <header className="sticky top-0 z-40 bg-[#faf8f5]/90 backdrop-blur-md border-b border-stone-200/80 transition-colors">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-zinc-200/80 transition-colors">
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-amber-800 flex items-center justify-center text-amber-100 shadow-sm group-hover:scale-105 transition-transform">
-            <BookOpen className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
+            <BookOpen className="w-4 h-4" />
           </div>
-          <div>
-            <span className="text-xl font-serif font-bold tracking-tight text-stone-900">清阅</span>
-            <span className="hidden sm:inline-block ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200/60">
-              纯粹无广
-            </span>
-          </div>
+          <span className="text-xl font-bold tracking-tight text-zinc-950">清阅</span>
         </Link>
 
         {/* Action Buttons */}
@@ -30,7 +25,7 @@ export const Header: React.FC<HeaderProps> = ({ onSearchFocus }) => {
           {onSearchFocus && (
             <button
               onClick={onSearchFocus}
-              className="p-2 sm:px-3 sm:py-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100/80 rounded-lg flex items-center gap-1.5 transition-colors text-sm"
+              className="p-2 sm:px-3 sm:py-1.5 text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 rounded-lg flex items-center gap-1.5 transition-colors text-sm font-medium"
               title="搜索小说"
             >
               <Search className="w-4 h-4" />
@@ -40,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({ onSearchFocus }) => {
 
           <Link
             href="/"
-            className="p-2 sm:px-3 sm:py-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100/80 rounded-lg flex items-center gap-1.5 transition-colors text-sm"
+            className="p-2 sm:px-3 sm:py-1.5 text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 rounded-lg flex items-center gap-1.5 transition-colors text-sm font-medium"
             title="我的书架"
           >
             <Library className="w-4 h-4" />
@@ -49,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({ onSearchFocus }) => {
 
           <Link
             href="/sources"
-            className="p-2 sm:px-3 sm:py-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100/80 rounded-lg flex items-center gap-1.5 transition-colors text-sm"
+            className="p-2 sm:px-3 sm:py-1.5 text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 rounded-lg flex items-center gap-1.5 transition-colors text-sm font-medium"
             title="书源设置与测速"
           >
             <Settings className="w-4 h-4" />

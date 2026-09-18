@@ -9,14 +9,10 @@ import {
   ArrowLeft,
   Server,
   Zap,
-  CheckCircle2,
   ExternalLink,
   Plus,
-  Radio,
   RefreshCw,
-  Sliders,
   Sparkles,
-  ShieldCheck,
 } from 'lucide-react';
 
 interface MirrorLatency {
@@ -117,48 +113,48 @@ export default function SourcesPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#faf8f5]">
+    <div className="min-h-screen flex flex-col bg-[#fafafa]">
       <Header />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8 space-y-8">
         {/* Back navigation */}
         <Link
           href="/"
-          className="inline-flex items-center gap-1 text-sm text-stone-500 hover:text-stone-900 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-500 hover:text-black transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          返回书架
+          BACK TO BOOKSHELF
         </Link>
 
         {/* Page Header */}
         <div className="space-y-2">
-          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900 flex items-center gap-2.5">
-            <Server className="w-7 h-7 text-amber-800" />
-            书籍站点源与防屏蔽管理
+          <h1 className="text-2xl sm:text-3xl font-bold text-zinc-950 flex items-center gap-2.5">
+            <Server className="w-7 h-7 text-black" />
+            书籍站点源与节点管理
           </h1>
-          <p className="text-sm text-stone-500">
-            第一版主等站点因网络变动常更换域名。清阅内置官方发布页多线路探测、测速切换与自定义扩展能力。
+          <p className="text-xs text-zinc-500 font-mono">
+            MULTI-SOURCE ENGINE · LATENCY MONITORING · CUSTOM ROUTING
           </p>
         </div>
 
-        {/* Diyibanzhu Source Card */}
+        {/* Sources Cards */}
         {sources.map((source) => (
           <div
             key={source.id}
-            className="bg-white rounded-2xl p-6 sm:p-8 border border-stone-200/80 shadow-sm space-y-6"
+            className="bg-white rounded-xl p-6 sm:p-8 border border-zinc-200 shadow-sm space-y-6"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-stone-900">{source.name}</h2>
-                  <span className="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium">
-                    已启用
+                  <h2 className="text-base font-bold text-zinc-950">{source.name}</h2>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-black text-white font-medium">
+                    ACTIVE
                   </span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-stone-100 text-stone-500">
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200">
                     v{source.version}
                   </span>
                 </div>
-                <p className="text-xs text-stone-500 mt-1">{source.description}</p>
+                <p className="text-xs text-zinc-500 mt-1">{source.description}</p>
               </div>
 
               <div className="flex items-center gap-2">
@@ -167,108 +163,110 @@ export default function SourcesPage() {
                     href={source.publishUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="px-3 py-1.5 rounded-lg border border-stone-200 hover:bg-stone-50 text-stone-700 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                    className="px-3 py-1.5 rounded-lg border border-zinc-300 hover:bg-zinc-50 text-zinc-800 text-xs font-medium flex items-center gap-1.5 transition-colors font-mono"
                   >
-                    <ExternalLink className="w-3.5 h-3.5 text-stone-400" />
-                    官方发布页
+                    <ExternalLink className="w-3.5 h-3.5 text-zinc-500" />
+                    发布页
                   </a>
                 )}
 
                 <button
                   onClick={testAllMirrors}
                   disabled={isTestingAll}
-                  className="px-3.5 py-1.5 rounded-lg bg-amber-800 text-white hover:bg-amber-900 text-xs font-medium flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-60"
+                  className="px-3.5 py-1.5 rounded-lg bg-black text-white hover:bg-zinc-800 text-xs font-medium flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-60 font-mono"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isTestingAll ? 'animate-spin' : ''}`} />
-                  全线路测速
+                  PING ALL
                 </button>
               </div>
             </div>
 
             {/* Mirror List */}
-            <div className="space-y-3">
-              <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block">
-                备用镜像节点列表（点击即可切换为当前阅读优先线路）
-              </label>
+            {source.mirrors && source.mirrors.length > 0 && (
+              <div className="space-y-3">
+                <label className="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-wider block">
+                  MIRROR NODES / 备用节点（点击切换首选线路）
+                </label>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {source.mirrors.map((mirror) => {
-                  const isSelected = selectedMirror === mirror || (!selectedMirror && mirror === source.defaultMirror);
-                  const pingInfo = latencies[mirror];
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {source.mirrors.map((mirror) => {
+                    const isSelected = selectedMirror === mirror || (!selectedMirror && mirror === source.defaultMirror);
+                    const pingInfo = latencies[mirror];
 
-                  return (
-                    <div
-                      key={mirror}
-                      onClick={() => handleSelectMirror(mirror)}
-                      className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                        isSelected
-                          ? 'border-amber-800 bg-amber-50/70 shadow-sm'
-                          : 'border-stone-200/80 hover:border-stone-300 hover:bg-stone-50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${
-                            isSelected ? 'border-amber-800 bg-amber-800 text-white' : 'border-stone-300'
-                          }`}
-                        >
-                          {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-xs font-mono font-medium text-stone-800 truncate">
-                            {mirror}
+                    return (
+                      <div
+                        key={mirror}
+                        onClick={() => handleSelectMirror(mirror)}
+                        className={`p-3 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
+                          isSelected
+                            ? 'border-black bg-zinc-100 shadow-sm'
+                            : 'border-zinc-200 hover:border-zinc-400 hover:bg-zinc-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${
+                              isSelected ? 'border-black bg-black text-white' : 'border-zinc-300'
+                            }`}
+                          >
+                            {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                           </div>
-                          {isSelected && (
-                            <div className="text-[11px] text-amber-800 font-semibold mt-0.5">
-                              首选阅读线路
+                          <div className="min-w-0">
+                            <div className="text-xs font-mono font-medium text-zinc-900 truncate">
+                              {mirror}
                             </div>
+                            {isSelected && (
+                              <div className="text-[10px] text-zinc-950 font-mono font-bold mt-0.5">
+                                PREFERRED NODE
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0 font-mono">
+                          {pingInfo ? (
+                            pingInfo.status === 'testing' ? (
+                              <span className="text-[11px] text-zinc-400 animate-pulse">PING...</span>
+                            ) : pingInfo.status === 'success' ? (
+                              <span
+                                className={`text-[11px] px-2 py-0.5 rounded font-mono font-medium ${
+                                  pingInfo.latency < 400
+                                    ? 'bg-zinc-200 text-zinc-950'
+                                    : pingInfo.latency < 900
+                                    ? 'bg-zinc-200 text-zinc-800'
+                                    : 'bg-zinc-200 text-zinc-700'
+                                }`}
+                              >
+                                {pingInfo.latency}ms
+                              </span>
+                            ) : (
+                              <span className="text-[11px] px-2 py-0.5 rounded bg-red-100 text-red-700">
+                                TIMEOUT
+                              </span>
+                            )
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                testMirror(mirror);
+                              }}
+                              className="text-zinc-400 hover:text-black p-1 text-xs"
+                              title="单独测速"
+                            >
+                              <Zap className="w-3.5 h-3.5" />
+                            </button>
                           )}
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {pingInfo ? (
-                          pingInfo.status === 'testing' ? (
-                            <span className="text-[11px] text-stone-400 animate-pulse">测速中...</span>
-                          ) : pingInfo.status === 'success' ? (
-                            <span
-                              className={`text-[11px] px-2 py-0.5 rounded font-mono font-medium ${
-                                pingInfo.latency < 400
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : pingInfo.latency < 900
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : 'bg-rose-100 text-rose-800'
-                              }`}
-                            >
-                              {pingInfo.latency}ms
-                            </span>
-                          ) : (
-                            <span className="text-[11px] px-2 py-0.5 rounded bg-red-100 text-red-700">
-                              超时
-                            </span>
-                          )
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              testMirror(mirror);
-                            }}
-                            className="text-stone-400 hover:text-stone-700 p-1 text-xs"
-                            title="单独测速"
-                          >
-                            <Zap className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Custom Mirror Input */}
-            <form onSubmit={handleAddCustomMirror} className="pt-2 border-t border-stone-100">
-              <label className="text-xs font-semibold text-stone-500 block mb-2">
+            <form onSubmit={handleAddCustomMirror} className="pt-2 border-t border-zinc-100">
+              <label className="text-xs font-semibold text-zinc-600 block mb-2">
                 手动添加自定义备用域名 / 镜像
               </label>
               <div className="flex gap-2">
@@ -277,14 +275,14 @@ export default function SourcesPage() {
                   placeholder="https://m.custom-domain.com"
                   value={customMirrorInput}
                   onChange={(e) => setCustomMirrorInput(e.target.value)}
-                  className="flex-1 px-3 py-2 text-xs bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-800"
+                  className="flex-1 px-3 py-2 text-xs bg-zinc-50 border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-black font-mono text-zinc-900"
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-stone-800 hover:bg-stone-900 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors"
+                  className="px-4 py-2 bg-black hover:bg-zinc-800 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors font-mono"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  添加线路
+                  ADD NODE
                 </button>
               </div>
             </form>
@@ -292,13 +290,13 @@ export default function SourcesPage() {
         ))}
 
         {/* Extensibility & Custom Source Guide */}
-        <div className="bg-stone-100/60 rounded-2xl p-6 border border-stone-200/80 space-y-3">
-          <h3 className="font-serif font-bold text-stone-900 text-sm flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-800" />
-            后续扩展新书源指南 (Architecture Extensibility)
+        <div className="bg-zinc-100 rounded-xl p-6 border border-zinc-200 space-y-3 font-mono text-xs">
+          <h3 className="font-bold text-zinc-950 text-xs flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-black" />
+            RULE ENGINE EXTENSION / 规则引擎扩展
           </h3>
-          <p className="text-xs text-stone-600 leading-relaxed">
-            本项目采用模块化插件架构（`src/sources/`）。若需新增其它站点（如 69书吧、笔趣阁或自建站），只需在 <code className="bg-stone-200 px-1 py-0.5 rounded text-amber-900">src/sources/</code> 目录下实现 <code className="bg-stone-200 px-1 py-0.5 rounded text-amber-900">BookSource</code> 接口中的 <code className="bg-stone-200 px-1 py-0.5 rounded text-amber-900">search</code>、<code className="bg-stone-200 px-1 py-0.5 rounded text-amber-900">getDetail</code> 和 <code className="bg-stone-200 px-1 py-0.5 rounded text-amber-900">getChapter</code> 方法，并在 <code className="bg-stone-200 px-1 py-0.5 rounded text-amber-900">sourceRegistry</code> 中注册即可无缝切换！
+          <p className="text-zinc-600 leading-relaxed">
+            本项目已全面支持规则驱动书源引擎（`RuleBasedSource`），可无缝接入其它小说源或导入阅读 3.0 格式规则。
           </p>
         </div>
       </main>

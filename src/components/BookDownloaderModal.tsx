@@ -282,23 +282,23 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-stone-50/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 bg-zinc-50/50">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-800">
+            <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white">
               <Download className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-serif font-bold text-base text-stone-900 leading-none">
+              <h3 className="font-bold text-sm text-zinc-950 leading-none">
                 下载纯净 TXT 小说
               </h3>
-              <p className="text-xs text-stone-500 mt-1 line-clamp-1">
+              <p className="text-xs text-zinc-500 mt-1 line-clamp-1 font-mono">
                 《{book.title}》 · 共 {totalChapters} 章
               </p>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -311,47 +311,47 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
             <>
               {/* Option Selector */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block">
-                  下载范围选择
+                <label className="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-wider block">
+                  RANGE / 下载范围
                 </label>
 
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setMode('all')}
-                    className={`p-3 rounded-xl border text-left transition-all ${
+                    className={`p-3 rounded-lg border text-left transition-all ${
                       mode === 'all'
-                        ? 'border-amber-800 bg-amber-50/70 ring-1 ring-amber-800'
-                        : 'border-stone-200 hover:bg-stone-50'
+                        ? 'border-black bg-zinc-100 ring-1 ring-black'
+                        : 'border-zinc-200 hover:bg-zinc-50'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-1.5 font-medium text-sm text-stone-900">
-                        <BookOpen className="w-4 h-4 text-amber-800" />
+                      <div className="flex items-center gap-1.5 font-medium text-xs text-zinc-900">
+                        <BookOpen className="w-4 h-4 text-black" />
                         全本下载
                       </div>
-                      {mode === 'all' && <Check className="w-4 h-4 text-amber-800" />}
+                      {mode === 'all' && <Check className="w-4 h-4 text-black" />}
                     </div>
-                    <p className="text-xs text-stone-500">下载全部 {totalChapters} 章</p>
+                    <p className="text-[11px] text-zinc-500 font-mono">ALL {totalChapters} CHAPTERS</p>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setMode('range')}
-                    className={`p-3 rounded-xl border text-left transition-all ${
+                    className={`p-3 rounded-lg border text-left transition-all ${
                       mode === 'range'
-                        ? 'border-amber-800 bg-amber-50/70 ring-1 ring-amber-800'
-                        : 'border-stone-200 hover:bg-stone-50'
+                        ? 'border-black bg-zinc-100 ring-1 ring-black'
+                        : 'border-zinc-200 hover:bg-zinc-50'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-1.5 font-medium text-sm text-stone-900">
-                        <Layers className="w-4 h-4 text-amber-800" />
+                      <div className="flex items-center gap-1.5 font-medium text-xs text-zinc-900">
+                        <Layers className="w-4 h-4 text-black" />
                         指定范围
                       </div>
-                      {mode === 'range' && <Check className="w-4 h-4 text-amber-800" />}
+                      {mode === 'range' && <Check className="w-4 h-4 text-black" />}
                     </div>
-                    <p className="text-xs text-stone-500">按需选择起止章节</p>
+                    <p className="text-[11px] text-zinc-500 font-mono">CUSTOM RANGE</p>
                   </button>
                 </div>
               </div>
@@ -370,7 +370,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                           max={totalChapters}
                           value={startChapter}
                           onChange={(e) => setStartChapter(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="w-full pl-7 pr-7 py-1.5 text-sm bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-800"
+                          className="w-full pl-7 pr-7 py-1.5 text-sm bg-white border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-black"
                         />
                         <span className="absolute right-2.5 top-2 text-xs text-stone-400">章</span>
                       </div>
@@ -390,7 +390,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                           onChange={(e) =>
                             setEndChapter(Math.min(totalChapters, parseInt(e.target.value) || totalChapters))
                           }
-                          className="w-full pl-7 pr-7 py-1.5 text-sm bg-white border border-stone-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-800"
+                          className="w-full pl-7 pr-7 py-1.5 text-sm bg-white border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-black"
                         />
                         <span className="absolute right-2.5 top-2 text-xs text-stone-400">章</span>
                       </div>
@@ -428,12 +428,12 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
               )}
 
               {/* Format features badges */}
-              <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100 text-xs text-stone-600 space-y-1">
-                <div className="flex items-center gap-1.5 font-medium text-amber-900 mb-1">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-700" />
+              <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 text-xs text-zinc-600 space-y-1">
+                <div className="flex items-center gap-1.5 font-medium text-zinc-900 mb-1">
+                  <Sparkles className="w-3.5 h-3.5 text-black" />
                   TXT 格式化特性
                 </div>
-                <div className="grid grid-cols-2 gap-1 text-[11px] text-stone-500">
+                <div className="grid grid-cols-2 gap-1 text-[11px] text-zinc-500 font-mono">
                   <div>✓ 智能多线路并发解析</div>
                   <div>✓ 深度过滤防屏蔽广告</div>
                   <div>✓ 标准小说段落两字缩进</div>
@@ -445,7 +445,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
               <button
                 type="button"
                 onClick={handleStartExport}
-                className="w-full py-3 px-4 rounded-xl bg-amber-800 hover:bg-amber-900 text-white font-medium text-sm transition-colors shadow-sm flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-lg bg-black hover:bg-zinc-800 text-white font-medium text-xs transition-colors shadow-sm flex items-center justify-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 立即导出并下载 ({rangeCount} 章)
@@ -457,27 +457,27 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
           {status === 'exporting' && (
             <div className="py-4 space-y-5">
               <div className="text-center space-y-1">
-                <div className="w-12 h-12 mx-auto rounded-full bg-amber-100 flex items-center justify-center text-amber-800 mb-3">
-                  <Loader2 className="w-6 h-6 animate-spin" />
+                <div className="w-10 h-10 mx-auto rounded-full bg-black flex items-center justify-center text-white mb-3">
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 </div>
-                <h4 className="font-medium text-base text-stone-900">正在下载与排版章节...</h4>
-                <p className="text-xs text-stone-500">
-                  多线路并发抓取中，自动过滤广告并进行段落缩进排版
+                <h4 className="font-bold text-sm text-zinc-950">正在下载与排版章节...</h4>
+                <p className="text-xs text-zinc-500 font-mono">
+                  PARSING CHAPTERS & REMOVING ADS
                 </p>
               </div>
 
               {/* Progress bar and counter */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-stone-600 font-medium">
+                <div className="flex items-center justify-between text-xs text-zinc-600 font-medium">
                   <span>
-                    已解析: <strong className="text-amber-900 font-bold">{progress.current}</strong> / {progress.total} 章
+                    已解析: <strong className="text-black font-bold font-mono">{progress.current}</strong> / {progress.total} 章
                   </span>
-                  <span className="font-mono text-amber-900 font-bold">{progress.percent}%</span>
+                  <span className="font-mono text-black font-bold">{progress.percent}%</span>
                 </div>
 
-                <div className="w-full bg-stone-100 rounded-full h-3.5 overflow-hidden border border-stone-200 p-0.5">
+                <div className="w-full bg-zinc-100 rounded-full h-3 overflow-hidden border border-zinc-200 p-0.5">
                   <div
-                    className="bg-gradient-to-r from-amber-700 to-amber-900 h-full rounded-full transition-all duration-300"
+                    className="bg-black h-full rounded-full transition-all duration-300"
                     style={{ width: `${progress.percent}%` }}
                   />
                 </div>
@@ -488,7 +488,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="w-full py-2 px-4 rounded-xl border border-stone-300 hover:bg-stone-100 text-stone-700 text-xs font-medium transition-colors"
+                  className="w-full py-2 px-4 rounded-lg border border-zinc-300 hover:bg-zinc-100 text-zinc-700 text-xs font-medium transition-colors"
                 >
                   取消导出
                 </button>
@@ -499,24 +499,24 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
           {/* Status: COMPLETED */}
           {status === 'completed' && (
             <div className="py-4 text-center space-y-4">
-              <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mb-2">
-                <CheckCircle2 className="w-7 h-7" />
+              <div className="w-10 h-10 mx-auto rounded-full bg-black flex items-center justify-center text-white mb-2">
+                <CheckCircle2 className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-bold text-base text-stone-900">导出完成！</h4>
-                <p className="text-xs text-stone-500 mt-1">
-                  已成功下载并格式化 {progress.total} 章节，浏览器已自动启动下载。
+                <h4 className="font-bold text-sm text-zinc-950">导出完成！</h4>
+                <p className="text-xs text-zinc-500 mt-1 font-mono">
+                  EXPORTED {progress.total} CHAPTERS TO TXT
                 </p>
               </div>
 
               {lastBlob && (
-                <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 text-left text-xs space-y-1">
-                  <div className="font-medium text-stone-800 flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5 text-stone-500" />
+                <div className="p-3 bg-zinc-50 rounded-lg border border-zinc-200 text-left text-xs space-y-1">
+                  <div className="font-medium text-zinc-800 flex items-center gap-1.5 font-mono">
+                    <FileText className="w-3.5 h-3.5 text-zinc-500" />
                     <span className="truncate">{lastBlob.filename}</span>
                   </div>
-                  <div className="text-[11px] text-stone-400">
-                    文件大小: {(lastBlob.blob.size / 1024).toFixed(1)} KB · UTF-8 纯文本
+                  <div className="text-[11px] text-zinc-400 font-mono">
+                    {(lastBlob.blob.size / 1024).toFixed(1)} KB · UTF-8 PLAIN TEXT
                   </div>
                 </div>
               )}
@@ -526,7 +526,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                   <button
                     type="button"
                     onClick={() => downloadBlob(lastBlob.blob, lastBlob.filename)}
-                    className="flex-1 py-2.5 px-4 rounded-xl border border-stone-300 hover:bg-stone-50 text-stone-700 text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2 px-4 rounded-lg border border-zinc-300 hover:bg-zinc-50 text-zinc-800 text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
                   >
                     <Download className="w-3.5 h-3.5" />
                     再次保存
@@ -535,7 +535,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-amber-800 hover:bg-amber-900 text-white text-xs font-medium transition-colors"
+                  className="flex-1 py-2 px-4 rounded-lg bg-black hover:bg-zinc-800 text-white text-xs font-medium transition-colors"
                 >
                   完成
                 </button>

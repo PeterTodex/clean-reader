@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ReaderSettings } from '@/lib/storage';
-import { X, Type, Sun, Moon, Maximize2, Smartphone, Check } from 'lucide-react';
+import { X, Type } from 'lucide-react';
 
 interface ReaderSettingsModalProps {
   isOpen: boolean;
@@ -22,35 +22,35 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
   if (!isOpen) return null;
 
   const themes: { id: ReaderSettings['theme']; label: string; bg: string; text: string; border: string }[] = [
-    { id: 'parchment', label: '羊皮纸', bg: '#f7f3e8', text: '#382e21', border: '#e5dbc7' },
-    { id: 'eyecare', label: '豆沙绿', bg: '#e9f2e8', text: '#1a331c', border: '#cbe0cb' },
-    { id: 'white', label: '纯净白', bg: '#ffffff', text: '#1e293b', border: '#e2e8f0' },
-    { id: 'eink', label: '水墨灰', bg: '#eeeeee', text: '#111111', border: '#d1d5db' },
-    { id: 'dark', label: '深色夜间', bg: '#18191c', text: '#cfd4dc', border: '#2b2e34' },
-    { id: 'oled', label: '极致纯黑', bg: '#000000', text: '#9ca3af', border: '#1f2937' },
+    { id: 'white', label: '极简白', bg: '#ffffff', text: '#09090b', border: '#e4e4e7' },
+    { id: 'dark', label: '暗夜黑', bg: '#09090b', text: '#f4f4f5', border: '#27272a' },
+    { id: 'oled', label: 'OLED纯黑', bg: '#000000', text: '#e4e4e7', border: '#18181b' },
+    { id: 'eink', label: '水墨灰', bg: '#f4f4f5', text: '#09090b', border: '#d4d4d8' },
+    { id: 'parchment', label: '羊皮纸', bg: '#faf8f5', text: '#18181b', border: '#e4e4e7' },
+    { id: 'eyecare', label: '豆沙绿', bg: '#f0f4f1', text: '#142016', border: '#d1ded3' },
   ];
 
   const fonts: { id: ReaderSettings['fontFamily']; label: string }[] = [
     { id: 'serif', label: '衬线宋体' },
-    { id: 'kaiti', label: '典雅楷体' },
     { id: 'sans', label: '现代黑体' },
+    { id: 'kaiti', label: '典雅楷体' },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm">
       <div
-        className="w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl border border-stone-200 text-stone-800 max-h-[85vh] overflow-y-auto"
+        className="w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-xl p-6 shadow-2xl border border-zinc-200 text-zinc-900 max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-stone-100">
-          <h3 className="font-serif font-bold text-lg text-stone-900 flex items-center gap-2">
-            <Type className="w-5 h-5 text-amber-800" />
+        <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
+          <h3 className="font-bold text-base text-zinc-950 flex items-center gap-2">
+            <Type className="w-5 h-5 text-black" />
             阅读偏好设置
           </h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -59,8 +59,8 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
         <div className="py-4 space-y-6">
           {/* Theme selection */}
           <div>
-            <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2.5">
-              阅读背景主题
+            <label className="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-wider block mb-2.5">
+              THEME / 背景主题
             </label>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {themes.map((t) => (
@@ -68,15 +68,15 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
                   key={t.id}
                   onClick={() => onUpdateSettings({ theme: t.id })}
                   style={{ backgroundColor: t.bg, color: t.text, borderColor: t.border }}
-                  className={`h-14 rounded-xl border flex flex-col items-center justify-center relative transition-all text-xs font-medium shadow-sm ${
+                  className={`h-14 rounded-lg border flex flex-col items-center justify-center relative transition-all text-xs font-medium shadow-sm ${
                     settings.theme === t.id
-                      ? 'ring-2 ring-amber-700 ring-offset-2 scale-105'
+                      ? 'ring-2 ring-black ring-offset-2 scale-105 font-bold'
                       : 'hover:opacity-90'
                   }`}
                 >
                   <span>{t.label}</span>
                   {settings.theme === t.id && (
-                    <span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-amber-800 text-white flex items-center justify-center text-[9px]">
+                    <span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-black text-white flex items-center justify-center text-[9px]">
                       ✓
                     </span>
                   )}
@@ -89,13 +89,13 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-semibold text-stone-500">字号大小</span>
-                <span className="text-xs font-mono font-medium text-stone-700">{settings.fontSize}px</span>
+                <span className="text-xs font-semibold text-zinc-500">字号大小</span>
+                <span className="text-xs font-mono font-medium text-zinc-800">{settings.fontSize}px</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => onUpdateSettings({ fontSize: Math.max(14, settings.fontSize - 2) })}
-                  className="w-9 h-9 rounded-lg border border-stone-200 flex items-center justify-center text-sm font-semibold hover:bg-stone-50"
+                  className="w-8 h-8 rounded border border-zinc-200 flex items-center justify-center text-xs font-semibold hover:bg-zinc-100"
                 >
                   A-
                 </button>
@@ -106,11 +106,11 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
                   step="1"
                   value={settings.fontSize}
                   onChange={(e) => onUpdateSettings({ fontSize: Number(e.target.value) })}
-                  className="flex-1 accent-amber-800"
+                  className="flex-1 accent-black"
                 />
                 <button
                   onClick={() => onUpdateSettings({ fontSize: Math.min(32, settings.fontSize + 2) })}
-                  className="w-9 h-9 rounded-lg border border-stone-200 flex items-center justify-center text-sm font-semibold hover:bg-stone-50"
+                  className="w-8 h-8 rounded border border-zinc-200 flex items-center justify-center text-xs font-semibold hover:bg-zinc-100"
                 >
                   A+
                 </button>
@@ -119,13 +119,13 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
 
             <div>
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-semibold text-stone-500">行距行高</span>
-                <span className="text-xs font-mono font-medium text-stone-700">{settings.lineHeight.toFixed(2)}</span>
+                <span className="text-xs font-semibold text-zinc-500">行距行高</span>
+                <span className="text-xs font-mono font-medium text-zinc-800">{settings.lineHeight.toFixed(2)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => onUpdateSettings({ lineHeight: Math.max(1.4, Number((settings.lineHeight - 0.1).toFixed(2))) })}
-                  className="w-9 h-9 rounded-lg border border-stone-200 flex items-center justify-center text-xs hover:bg-stone-50"
+                  className="w-8 h-8 rounded border border-zinc-200 flex items-center justify-center text-xs hover:bg-zinc-100"
                 >
                   紧凑
                 </button>
@@ -136,11 +136,11 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
                   step="0.05"
                   value={settings.lineHeight}
                   onChange={(e) => onUpdateSettings({ lineHeight: Number(e.target.value) })}
-                  className="flex-1 accent-amber-800"
+                  className="flex-1 accent-black"
                 />
                 <button
                   onClick={() => onUpdateSettings({ lineHeight: Math.min(2.6, Number((settings.lineHeight + 0.1).toFixed(2))) })}
-                  className="w-9 h-9 rounded-lg border border-stone-200 flex items-center justify-center text-xs hover:bg-stone-50"
+                  className="w-8 h-8 rounded border border-zinc-200 flex items-center justify-center text-xs hover:bg-zinc-100"
                 >
                   疏朗
                 </button>
@@ -150,18 +150,18 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
 
           {/* Font family */}
           <div>
-            <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2">
-              排版字体
+            <label className="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-wider block mb-2">
+              FONT / 排版字体
             </label>
             <div className="grid grid-cols-3 gap-2">
               {fonts.map((f) => (
                 <button
                   key={f.id}
                   onClick={() => onUpdateSettings({ fontFamily: f.id })}
-                  className={`py-2 px-3 rounded-lg border text-sm font-medium transition-all ${
+                  className={`py-2 px-3 rounded-lg border text-xs font-medium transition-all ${
                     settings.fontFamily === f.id
-                      ? 'border-amber-800 bg-amber-50/80 text-amber-950 font-bold'
-                      : 'border-stone-200 hover:bg-stone-50 text-stone-700'
+                      ? 'border-black bg-zinc-100 text-black font-bold'
+                      : 'border-zinc-200 hover:bg-zinc-50 text-zinc-700'
                   }`}
                 >
                   {f.label}
@@ -173,8 +173,8 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
           {/* Max width container */}
           <div>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-semibold text-stone-500">页面版心宽度</span>
-              <span className="text-xs font-mono font-medium text-stone-700">{settings.maxWidth}px</span>
+              <span className="text-xs font-semibold text-zinc-500">页面版心宽度</span>
+              <span className="text-xs font-mono font-medium text-zinc-800">{settings.maxWidth}px</span>
             </div>
             <input
               type="range"
@@ -183,35 +183,35 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
               step="20"
               value={settings.maxWidth}
               onChange={(e) => onUpdateSettings({ maxWidth: Number(e.target.value) })}
-              className="w-full accent-amber-800"
+              className="w-full accent-black"
             />
           </div>
 
           {/* Reading mode */}
           <div>
-            <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2">
-              阅读翻页体验
+            <label className="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-wider block mb-2">
+              MODE / 阅读翻页模式
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => onUpdateSettings({ readingMode: 'scroll' })}
-                className={`py-2 px-3 rounded-lg border text-sm font-medium transition-all ${
+                className={`py-2 px-3 rounded-lg border text-xs font-medium transition-all ${
                   settings.readingMode === 'scroll'
-                    ? 'border-amber-800 bg-amber-50/80 text-amber-950 font-bold'
-                    : 'border-stone-200 hover:bg-stone-50 text-stone-700'
+                    ? 'border-black bg-zinc-100 text-black font-bold'
+                    : 'border-zinc-200 hover:bg-zinc-50 text-zinc-700'
                 }`}
               >
-                📜 连续垂直滚动
+                连续垂直滚动
               </button>
               <button
                 onClick={() => onUpdateSettings({ readingMode: 'page' })}
-                className={`py-2 px-3 rounded-lg border text-sm font-medium transition-all ${
+                className={`py-2 px-3 rounded-lg border text-xs font-medium transition-all ${
                   settings.readingMode === 'page'
-                    ? 'border-amber-800 bg-amber-50/80 text-amber-950 font-bold'
-                    : 'border-stone-200 hover:bg-stone-50 text-stone-700'
+                    ? 'border-black bg-zinc-100 text-black font-bold'
+                    : 'border-zinc-200 hover:bg-zinc-50 text-zinc-700'
                 }`}
               >
-                📖 章节分页翻阅
+                章节分页翻阅
               </button>
             </div>
           </div>
@@ -219,13 +219,13 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
           {/* Mirror selection if available */}
           {availableMirrors.length > 0 && (
             <div>
-              <label className="text-xs font-semibold text-stone-500 uppercase tracking-wider block mb-2">
-                当前站点镜像线路
+              <label className="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-wider block mb-2">
+                MIRROR / 当前镜像线路
               </label>
               <select
                 value={settings.selectedMirror || ''}
                 onChange={(e) => onUpdateSettings({ selectedMirror: e.target.value })}
-                className="w-full py-2 px-3 rounded-lg border border-stone-200 text-sm bg-stone-50 text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-800"
+                className="w-full py-2 px-3 rounded-lg border border-zinc-200 text-xs bg-zinc-50 text-zinc-800 focus:outline-none focus:ring-1 focus:ring-black"
               >
                 <option value="">默认最优线路</option>
                 {availableMirrors.map((m) => (
@@ -238,16 +238,16 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
           )}
 
           {/* Toggle Next Chapter Auto Preload */}
-          <div className="flex items-center justify-between pt-2 border-t border-stone-100">
+          <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
             <div>
-              <span className="text-sm font-medium text-stone-800 block">智能后台预加载下一章</span>
-              <span className="text-xs text-stone-400">阅读时静默预加载，翻页秒开无停顿</span>
+              <span className="text-xs font-medium text-zinc-900 block">后台自动预加载下一章</span>
+              <span className="text-[11px] text-zinc-400">阅读时静默预加载，翻页秒开无顿挫</span>
             </div>
             <input
               type="checkbox"
               checked={settings.autoPreloadNext}
               onChange={(e) => onUpdateSettings({ autoPreloadNext: e.target.checked })}
-              className="w-5 h-5 rounded text-amber-800 accent-amber-800 cursor-pointer"
+              className="w-4 h-4 rounded text-black accent-black cursor-pointer"
             />
           </div>
         </div>

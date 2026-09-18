@@ -270,7 +270,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               onClick={() => setShowTts(!showTts)}
               className={`p-2 rounded-lg transition-colors ${
                 showTts
-                  ? 'bg-amber-800 text-white hover:bg-amber-900 shadow-sm'
+                  ? 'bg-black text-white hover:bg-zinc-800 shadow-sm'
                   : 'hover:bg-black/5 dark:hover:bg-white/10'
               }`}
               title={showTts ? '关闭听书' : '语音朗读听书'}
@@ -322,7 +322,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         {/* Loading overlay indicator */}
         {isLoading && (
           <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
-            <div className="w-8 h-8 border-3 border-amber-800 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin" />
             <p className="text-sm opacity-60">加载章节正文中...</p>
           </div>
         )}
@@ -344,7 +344,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               dangerouslySetInnerHTML={{ __html: para }}
               className={`transition-all duration-300 ${
                 showTts && ttsParagraphIndex === idx
-                  ? 'bg-amber-500/15 border-l-4 border-amber-600 pl-3.5 py-0.5 rounded-r shadow-sm'
+                  ? 'bg-zinc-200/80 dark:bg-zinc-800/80 border-l-4 border-black dark:border-white pl-3.5 py-0.5 rounded-r shadow-sm font-medium'
                   : ''
               } ${showTts ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 rounded' : ''}`}
             />
@@ -380,7 +380,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           {chapter.nextChapterId ? (
             <button
               onClick={() => navigateToChapter(chapter.nextChapterId!)}
-              className="flex-1 py-3 px-4 rounded-xl bg-amber-800 text-white hover:bg-amber-900 transition-colors flex items-center justify-center gap-1.5 text-sm font-medium shadow-sm"
+              className="flex-1 py-3 px-4 rounded-xl bg-black text-white hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 text-sm font-medium shadow-sm"
             >
               下一章
               <ChevronRight className="w-4 h-4" />
@@ -411,8 +411,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                 }}
                 className={`px-2 py-1 rounded flex items-center gap-1 transition-colors text-xs font-medium ${
                   showTts
-                    ? 'bg-amber-800 text-white'
-                    : 'hover:bg-black/5 dark:hover:bg-white/10 text-amber-900 dark:text-amber-200'
+                    ? 'bg-black text-white'
+                    : 'hover:bg-black/5 dark:hover:bg-white/10 text-zinc-900 dark:text-zinc-100'
                 }`}
                 title={showTts ? '关闭听书' : '开启听书'}
               >

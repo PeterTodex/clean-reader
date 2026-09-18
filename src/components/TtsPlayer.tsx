@@ -310,14 +310,14 @@ export const TtsPlayer: React.FC<TtsPlayerProps> = ({
 
   if (!isSupported) {
     return (
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-lg bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-amber-300 dark:border-amber-800 shadow-2xl rounded-2xl p-4 flex items-center justify-between gap-3 text-stone-800 dark:text-stone-100">
-        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-lg bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-300 dark:border-zinc-700 shadow-2xl rounded-xl p-4 flex items-center justify-between gap-3 text-zinc-900 dark:text-zinc-100">
+        <div className="flex items-center gap-2 text-zinc-900 dark:text-zinc-100 text-sm">
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <span>当前浏览器暂不支持 Web Speech 语音朗读，请使用 Chrome 或 Edge 浏览器</span>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
+          className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
         >
           <X className="w-5 h-5" />
         </button>
@@ -328,13 +328,13 @@ export const TtsPlayer: React.FC<TtsPlayerProps> = ({
   const currentSnippet = stripHtml(paragraphs[currentParagraphIndex] || '');
 
   return (
-    <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[96%] max-w-2xl bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-stone-200/90 dark:border-stone-800 shadow-2xl rounded-2xl p-3.5 sm:p-4 text-stone-800 dark:text-stone-100 transition-all animate-fade-in select-none">
+    <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[96%] max-w-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 shadow-2xl rounded-xl p-3.5 sm:p-4 text-zinc-900 dark:text-zinc-100 transition-all select-none">
       {/* Top Header / Status */}
-      <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-stone-100 dark:border-stone-800 text-xs">
+      <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-zinc-100 dark:border-zinc-800 text-xs">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-900 dark:text-amber-300 font-medium flex-shrink-0">
-            <Headphones className={`w-3.5 h-3.5 ${isPlaying && !isPaused ? 'animate-pulse text-amber-700 dark:text-amber-400' : ''}`} />
-            <span>听书模式</span>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-black text-white font-mono text-[11px] font-medium flex-shrink-0">
+            <Headphones className={`w-3.5 h-3.5 ${isPlaying && !isPaused ? 'animate-pulse text-white' : ''}`} />
+            <span>TTS</span>
           </div>
           <span className="font-semibold truncate text-stone-700 dark:text-stone-200">
             {chapterTitle}
@@ -376,7 +376,7 @@ export const TtsPlayer: React.FC<TtsPlayerProps> = ({
           {isPlaying && !isPaused ? (
             <button
               onClick={handlePause}
-              className="p-2.5 rounded-full bg-amber-800 text-white hover:bg-amber-900 transition-transform active:scale-95 shadow-md"
+              className="p-2.5 rounded-full bg-black text-white hover:bg-zinc-800 transition-transform active:scale-95 shadow-md"
               title="暂停朗读"
             >
               <Pause className="w-5 h-5 fill-current" />
@@ -384,7 +384,7 @@ export const TtsPlayer: React.FC<TtsPlayerProps> = ({
           ) : (
             <button
               onClick={handlePlay}
-              className="p-2.5 rounded-full bg-amber-800 text-white hover:bg-amber-900 transition-transform active:scale-95 shadow-md"
+              className="p-2.5 rounded-full bg-black text-white hover:bg-zinc-800 transition-transform active:scale-95 shadow-md"
               title="开始朗读"
             >
               <Play className="w-5 h-5 fill-current ml-0.5" />
@@ -424,7 +424,7 @@ export const TtsPlayer: React.FC<TtsPlayerProps> = ({
               step="0.25"
               value={rate}
               onChange={(e) => handleRateChange(parseFloat(e.target.value))}
-              className="w-16 sm:w-20 accent-amber-800 cursor-pointer h-1.5"
+              className="w-16 sm:w-20 accent-black cursor-pointer h-1.5"
               title={`语速: ${rate.toFixed(2)}x`}
             />
           </div>
@@ -436,7 +436,7 @@ export const TtsPlayer: React.FC<TtsPlayerProps> = ({
               <select
                 value={selectedVoiceURI}
                 onChange={(e) => handleVoiceChange(e.target.value)}
-                className="text-xs py-1 px-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-800 dark:text-stone-200 max-w-[130px] sm:max-w-[150px] truncate focus:outline-none focus:ring-1 focus:ring-amber-800"
+                className="text-xs py-1 px-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 max-w-[130px] sm:max-w-[150px] truncate focus:outline-none focus:ring-1 focus:ring-black"
               >
                 {voices.map((v) => (
                   <option key={v.voiceURI} value={v.voiceURI}>
