@@ -33,10 +33,21 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   selectedMirror: '',
 };
 
+export interface BookmarkItem {
+  id: string;
+  bookId: string;
+  sourceId: string;
+  chapterId: string;
+  chapterTitle: string;
+  excerpt: string;
+  createTime: number;
+}
+
 const STORAGE_KEYS = {
   BOOKSHELF: 'clean_reader_bookshelf',
   SETTINGS: 'clean_reader_settings',
   ACTIVE_SOURCE: 'clean_reader_source',
+  BOOKMARKS: 'clean_reader_bookmarks',
 };
 
 export const storage = {
@@ -126,5 +137,53 @@ export const storage = {
       console.error('Failed to save settings:', e);
     }
     return updated;
+  },
+
+  getBookmarks(bookId?: string): BookmarkItem[] {
+    if (typeof window === 'undefined') return [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.BOOKMARKS);
+      const list: BookmarkItem[] = data ? JSON.parse(data) : [];
+      if (bookId) {
+        return list.filter((b) => b.bookId === bookId);
+      }
+      return list;
+    } catch {
+      return [];
+    }
+  },
+
+  addBookmark(item: Omit<BookmarkItem, 'id' | 'createTime'> & { id?: string; createTime?: number }): BookmarkItem {
+    const newItem: BookmarkItem = {
+      id: item.id || `bm_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      createTime: item.createTime || Date.now(),
+      ...item,
+    };
+    if (typeof window === 'undefined') return newItem;
+    try {
+      const bookmarks = storage.getBookmarks();
+      const existingIndex = bookmarks.findIndex(
+        (b) => b.id === newItem.id || (b.bookId === newItem.bookId && b.chapterId === newItem.chapterId)
+      );
+      if (existingIndex >= 0) {
+        bookmarks[existingIndex] = newItem;
+      } else {
+        bookmarks.unshift(newItem);
+      }
+      localStorage.setItem(STORAGE_KEYS.BOOKMARKS, JSON.stringify(bookmarks));
+    } catch (e) {
+      console.error('Failed to save bookmark:', e);
+    }
+    return newItem;
+  },
+
+  removeBookmark(id: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const bookmarks = storage.getBookmarks().filter((b) => b.id !== id);
+      localStorage.setItem(STORAGE_KEYS.BOOKMARKS, JSON.stringify(bookmarks));
+    } catch (e) {
+      console.error('Failed to remove bookmark:', e);
+    }
   },
 };

@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChapterContent, ChapterItem } from '@/sources/types';
 import { ReaderSettings, storage } from '@/lib/storage';
 import { ReaderSettingsModal } from './ReaderSettingsModal';
 import { ChapterDrawer } from './ChapterDrawer';
+import { BookmarkModal } from './BookmarkModal';
+import { TtsPlayer } from './TtsPlayer';
 import {
   ArrowLeft,
   ChevronLeft,
@@ -16,6 +18,8 @@ import {
   Maximize,
   Minimize,
   BookOpen,
+  Bookmark,
+  Headphones,
 } from 'lucide-react';
 
 interface ReaderViewProps {
@@ -42,6 +46,9 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const [settings, setSettings] = useState<ReaderSettings>(storage.getSettings());
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
+  const [showBookmarkModal, setShowBookmarkModal] = useState(false);
+  const [showTts, setShowTts] = useState(false);
+  const [ttsParagraphIndex, setTtsParagraphIndex] = useState(0);
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -50,6 +57,29 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   // In-memory cache for chapters to make transitions instant
   const chapterCacheRef = useRef<Map<string, ChapterContent>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
+  const paragraphRefs = useRef<(HTMLParagraphElement | null)[]>([]);
+
+  // Reset TTS paragraph index when chapter changes
+  useEffect(() => {
+    setTtsParagraphIndex(0);
+  }, [chapter.id]);
+
+  // Auto-scroll to active TTS paragraph when in TTS mode
+  useEffect(() => {
+    if (showTts && paragraphRefs.current[ttsParagraphIndex]) {
+      paragraphRefs.current[ttsParagraphIndex]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [ttsParagraphIndex, showTts]);
+
+  // Current excerpt for bookmarking
+  const currentExcerpt = useMemo(() => {
+    if (!chapter || !chapter.paragraphs || chapter.paragraphs.length === 0) return '';
+    const target = chapter.paragraphs[ttsParagraphIndex] || chapter.paragraphs[0] || '';
+    return target.replace(/<[^>]*>/g, '').trim().slice(0, 120);
+  }, [chapter, ttsParagraphIndex]);
 
   // Put initial chapter into cache
   useEffect(() => {
@@ -144,6 +174,13 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     [chapter.bookId, sourceId, settings.selectedMirror, isLoading, router]
   );
 
+  // TTS next chapter auto trigger
+  const handleTtsNextChapter = useCallback(() => {
+    if (chapter.nextChapterId) {
+      navigateToChapter(chapter.nextChapterId);
+    }
+  }, [chapter.nextChapterId, navigateToChapter]);
+
   // Fullscreen toggle
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -167,6 +204,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       } else if (e.key === 'Escape') {
         setShowSettingsModal(false);
         setShowDrawer(false);
+        setShowBookmarkModal(false);
       }
     };
 
@@ -220,7 +258,25 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             <span className="line-clamp-1 max-w-[180px] sm:max-w-xs">{bookTitle}</span>
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button
+              onClick={() => setShowBookmarkModal(true)}
+              className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+              title="书签管理"
+            >
+              <Bookmark className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setShowTts(!showTts)}
+              className={`p-2 rounded-lg transition-colors ${
+                showTts
+                  ? 'bg-amber-800 text-white hover:bg-amber-900 shadow-sm'
+                  : 'hover:bg-black/5 dark:hover:bg-white/10'
+              }`}
+              title={showTts ? '关闭听书' : '语音朗读听书'}
+            >
+              <Headphones className="w-5 h-5" />
+            </button>
             <button
               onClick={() => setShowDrawer(true)}
               className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
@@ -276,8 +332,21 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           {chapter.paragraphs.map((para, idx) => (
             <p
               key={idx}
+              ref={(el) => {
+                paragraphRefs.current[idx] = el;
+              }}
+              onClick={(e) => {
+                if (showTts) {
+                  e.stopPropagation();
+                  setTtsParagraphIndex(idx);
+                }
+              }}
               dangerouslySetInnerHTML={{ __html: para }}
-              className="transition-colors"
+              className={`transition-all duration-300 ${
+                showTts && ttsParagraphIndex === idx
+                  ? 'bg-amber-500/15 border-l-4 border-amber-600 pl-3.5 py-0.5 rounded-r shadow-sm'
+                  : ''
+              } ${showTts ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 rounded' : ''}`}
             />
           ))}
         </article>
@@ -330,11 +399,39 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
         } ${themeClass}`}
       >
-        <div className="max-w-4xl mx-auto px-4 h-12 flex items-center justify-between text-xs opacity-75">
-          <div className="truncate max-w-[200px]">{chapter.title}</div>
-          <div className="flex items-center gap-4">
-            <span>本章阅读进度: {readingProgress}%</span>
-            <span className="hidden sm:inline">快捷键: ← 上一章 / → 下一章 / F 全屏</span>
+        <div className="max-w-4xl mx-auto px-4 h-12 flex items-center justify-between text-xs">
+          <div className="truncate max-w-[160px] sm:max-w-[220px] opacity-75">{chapter.title}</div>
+          <div className="flex items-center gap-3">
+            <span className="opacity-75">进度: {readingProgress}%</span>
+            <div className="flex items-center gap-1 border-l reader-border pl-2 sm:pl-3">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTts(!showTts);
+                }}
+                className={`px-2 py-1 rounded flex items-center gap-1 transition-colors text-xs font-medium ${
+                  showTts
+                    ? 'bg-amber-800 text-white'
+                    : 'hover:bg-black/5 dark:hover:bg-white/10 text-amber-900 dark:text-amber-200'
+                }`}
+                title={showTts ? '关闭听书' : '开启听书'}
+              >
+                <Headphones className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">听书</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowBookmarkModal(true);
+                }}
+                className="px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/10 flex items-center gap-1 transition-colors text-xs font-medium text-stone-700 dark:text-stone-300"
+                title="添加/查看书签"
+              >
+                <Bookmark className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">书签</span>
+              </button>
+            </div>
+            <span className="hidden md:inline opacity-50">快捷键: ←/→ 翻页</span>
           </div>
         </div>
       </footer>
@@ -357,6 +454,32 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         onUpdateSettings={handleUpdateSettings}
         availableMirrors={availableMirrors}
       />
+
+      {/* Bookmark Modal */}
+      <BookmarkModal
+        isOpen={showBookmarkModal}
+        onClose={() => setShowBookmarkModal(false)}
+        bookId={chapter.bookId}
+        sourceId={sourceId}
+        currentChapterId={chapter.id}
+        currentChapterTitle={chapter.title}
+        currentExcerpt={currentExcerpt}
+        onSelectBookmark={(targetChapterId) => navigateToChapter(targetChapterId)}
+      />
+
+      {/* TTS Audio Player */}
+      {showTts && (
+        <TtsPlayer
+          paragraphs={chapter.paragraphs}
+          chapterTitle={chapter.title}
+          chapterId={chapter.id}
+          nextChapterId={chapter.nextChapterId}
+          onNextChapter={handleTtsNextChapter}
+          onClose={() => setShowTts(false)}
+          currentParagraphIndex={ttsParagraphIndex}
+          onParagraphChange={setTtsParagraphIndex}
+        />
+      )}
     </div>
   );
 };

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
+import { BookDownloaderModal } from '@/components/BookDownloaderModal';
 import { BookDetail, ChapterItem } from '@/sources/types';
 import { storage } from '@/lib/storage';
 import {
@@ -17,6 +18,7 @@ import {
   Calendar,
   Layers,
   Clock,
+  Download,
 } from 'lucide-react';
 
 export default function BookDetailPage() {
@@ -34,6 +36,7 @@ export default function BookDetailPage() {
   const [chapterSearch, setChapterSearch] = useState('');
   const [isReverse, setIsReverse] = useState(false);
   const [lastReadChapterId, setLastReadChapterId] = useState<string | null>(null);
+  const [showDownloader, setShowDownloader] = useState(false);
 
   useEffect(() => {
     if (!bookId) return;
@@ -212,6 +215,14 @@ export default function BookDetailPage() {
                       </>
                     )}
                   </button>
+
+                  <button
+                    onClick={() => setShowDownloader(true)}
+                    className="px-5 py-2.5 rounded-xl border border-stone-300 hover:border-amber-800 bg-white hover:bg-amber-50 text-stone-700 hover:text-amber-900 text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+                  >
+                    <Download className="w-4 h-4 text-amber-800" />
+                    下载全本 TXT
+                  </button>
                 </div>
               </div>
             </div>
@@ -276,6 +287,13 @@ export default function BookDetailPage() {
                 })}
               </div>
             </div>
+
+            <BookDownloaderModal
+              isOpen={showDownloader}
+              onClose={() => setShowDownloader(false)}
+              book={book}
+              sourceId={sourceId}
+            />
           </>
         )}
       </main>
