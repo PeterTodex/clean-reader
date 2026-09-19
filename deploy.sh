@@ -10,7 +10,7 @@ set -e
 PORT="${PORT:-9527}"
 APP_NAME="clean-reader"
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
+export PATH="$PATH:/usr/local/bin:~/.local/bin"
 # 颜色输出
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -92,17 +92,30 @@ check_and_install_node() {
         if command -v apt-get >/dev/null 2>&1; then
             $SUDO apt-get update -y
             $SUDO apt-get install -y curl ca-certificates gnupg
-            curl -fsSL https://deb.nodesource.com/setup_22.x | $SUDO -E bash -
+            if [ -n "$SUDO" ]; then
+                curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+            else
+                curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+            fi
             $SUDO apt-get install -y nodejs
         elif command -v dnf >/dev/null 2>&1; then
-            curl -fsSL https://rpm.nodesource.com/setup_22.x | $SUDO bash -
+            if [ -n "$SUDO" ]; then
+                curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
+            else
+                curl -fsSL https://rpm.nodesource.com/setup_22.x | bash -
+            fi
             $SUDO dnf install -y nodejs
         elif command -v yum >/dev/null 2>&1; then
-            curl -fsSL https://rpm.nodesource.com/setup_22.x | $SUDO bash -
+            if [ -n "$SUDO" ]; then
+                curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
+            else
+                curl -fsSL https://rpm.nodesource.com/setup_22.x | bash -
+            fi
             $SUDO yum install -y nodejs
         else
             error "未能识别的 Linux 发行版包管理器，请手动安装 Node.js >= 22.5.0 后重新运行本脚本。"
         fi
+        hash -r 2>/dev/null || true
         success "Node.js 安装完成: $(node -v)"
     fi
 }
