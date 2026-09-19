@@ -19,20 +19,20 @@ export const BookCoverPlaceholder: React.FC<{ title?: string; className?: string
 
   return (
     <svg
-      viewBox="0 0 100 150"
+      viewBox="0 0 100 125"
       preserveAspectRatio="xMidYMid meet"
       className={`w-full h-full bg-zinc-100 ${className}`}
       role="img"
       aria-label={title ? `${title}（暂无封面）` : '暂无封面'}
     >
       {/* Hairline spine, echoing a book's binding. */}
-      <rect x="0" y="0" width="2" height="150" className="fill-zinc-200" />
+      <rect x="0" y="0" width="2" height="125" className="fill-zinc-200" />
       <text
         x="52"
-        y="76"
+        y="64"
         textAnchor="middle"
         dominantBaseline="central"
-        fontSize="44"
+        fontSize="42"
         className="fill-zinc-300 font-serif select-none"
       >
         {initial}

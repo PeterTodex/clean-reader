@@ -229,7 +229,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                     onClick={onClose}
                     className="flex gap-3.5 p-3 rounded-xl bg-zinc-50/60 hover:bg-zinc-100 border border-zinc-200/70 hover:border-zinc-300 transition-all group"
                   >
-                    <div className="w-14 aspect-[2/3] bg-zinc-100 rounded-md overflow-hidden shrink-0 relative border border-zinc-200">
+                    <div className="w-14 aspect-[4/5] bg-zinc-100 rounded-md overflow-hidden shrink-0 relative border border-zinc-200">
                       <BookCoverPlaceholder title={book.title} className="absolute inset-0" />
                       {book.cover ? (
                         <img

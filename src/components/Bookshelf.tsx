@@ -56,7 +56,7 @@ export const Bookshelf: React.FC<BookshelfProps> = ({ items, onRefresh, onOpenSe
             className="group relative flex flex-col bg-white rounded-xl overflow-hidden border border-zinc-200 shadow-sm hover:shadow hover:border-black transition-all duration-200"
           >
             {/* Book Cover */}
-            <Link href={readHref} className="relative aspect-[2/3] w-full bg-zinc-100 overflow-hidden block border-b border-zinc-100">
+            <Link href={readHref} className="relative aspect-[4/5] w-full bg-zinc-100 overflow-hidden block border-b border-zinc-100">
               <BookCoverPlaceholder title={book.title} className="absolute inset-0" />
               {book.cover ? (
                 <img

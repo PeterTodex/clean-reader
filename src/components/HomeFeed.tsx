@@ -26,7 +26,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="space-y-2">
-              <div className="w-full aspect-[2/3] bg-zinc-200 rounded-lg" />
+              <div className="w-full aspect-[4/5] bg-zinc-200 rounded-lg" />
               <div className="w-3/4 h-4 bg-zinc-200 rounded" />
               <div className="w-1/2 h-3 bg-zinc-100 rounded" />
             </div>
@@ -76,7 +76,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                     href={`/book/${book.id}?source=${sourceId}`}
                     className="group flex flex-col space-y-2 p-2 rounded-xl bg-white border border-zinc-200/70 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all"
                   >
-                    <div className="w-full aspect-[2/3] rounded-lg overflow-hidden relative bg-zinc-100 shadow-inner">
+                    <div className="w-full aspect-[4/5] rounded-lg overflow-hidden relative bg-zinc-100 shadow-inner">
                       {book.cover ? (
                         <img
                           src={book.cover}
@@ -232,7 +232,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                     href={`/book/${book.id}?source=${sourceId}`}
                     className="group flex flex-col space-y-2 p-2 rounded-xl bg-white border border-zinc-200/70 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all"
                   >
-                    <div className="w-full aspect-[2/3] rounded-lg overflow-hidden relative bg-zinc-100 shadow-inner">
+                    <div className="w-full aspect-[4/5] rounded-lg overflow-hidden relative bg-zinc-100 shadow-inner">
                       {book.cover ? (
                         <img
                           src={book.cover}

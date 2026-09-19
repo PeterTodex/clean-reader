@@ -132,7 +132,7 @@ export default function BookDetailPage() {
             {/* Book Meta Card */}
             <div className="bg-white rounded-xl p-6 sm:p-8 border border-zinc-200 shadow-sm flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
               {/* Cover */}
-              <div className="w-36 sm:w-44 aspect-[2/3] bg-zinc-100 rounded-lg overflow-hidden shadow-sm border border-zinc-200 flex-shrink-0 mx-auto sm:mx-0 relative">
+              <div className="w-36 sm:w-44 aspect-[4/5] bg-zinc-100 rounded-lg overflow-hidden shadow-sm border border-zinc-200 flex-shrink-0 mx-auto sm:mx-0 relative">
                 <BookCoverPlaceholder title={book.title} className="absolute inset-0" />
                 {book.cover ? (
                   <img
