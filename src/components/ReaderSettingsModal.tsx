@@ -9,7 +9,6 @@ interface ReaderSettingsModalProps {
   onClose: () => void;
   settings: ReaderSettings;
   onUpdateSettings: (newSettings: Partial<ReaderSettings>) => void;
-  availableMirrors?: string[];
 }
 
 export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
@@ -17,7 +16,6 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
   onClose,
   settings,
   onUpdateSettings,
-  availableMirrors = [],
 }) => {
   if (!isOpen) return null;
 
@@ -60,7 +58,7 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
           {/* Theme selection */}
           <div>
             <label className="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-wider block mb-2.5">
-              THEME / 背景主题
+              背景主题
             </label>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {themes.map((t) => (
@@ -151,7 +149,7 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
           {/* Font family */}
           <div>
             <label className="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-wider block mb-2">
-              FONT / 排版字体
+              排版字体
             </label>
             <div className="grid grid-cols-3 gap-2">
               {fonts.map((f) => (
@@ -190,7 +188,7 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
           {/* Reading mode */}
           <div>
             <label className="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-wider block mb-2">
-              MODE / 阅读翻页模式
+              阅读翻页模式
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -215,27 +213,6 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
               </button>
             </div>
           </div>
-
-          {/* Mirror selection if available */}
-          {availableMirrors.length > 0 && (
-            <div>
-              <label className="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-wider block mb-2">
-                MIRROR / 当前镜像线路
-              </label>
-              <select
-                value={settings.selectedMirror || ''}
-                onChange={(e) => onUpdateSettings({ selectedMirror: e.target.value })}
-                className="w-full py-2 px-3 rounded-lg border border-zinc-200 text-xs bg-zinc-50 text-zinc-800 focus:outline-none focus:ring-1 focus:ring-black"
-              >
-                <option value="">默认最优线路</option>
-                {availableMirrors.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
 
           {/* Toggle Next Chapter Auto Preload */}
           <div className="flex items-center justify-between pt-2 border-t border-zinc-100">

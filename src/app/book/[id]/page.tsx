@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { BookDownloaderModal } from '@/components/BookDownloaderModal';
+import { BookCoverPlaceholder } from '@/components/BookCoverPlaceholder';
 import { BookDetail, ChapterItem } from '@/sources/types';
 import { storage } from '@/lib/storage';
 import {
@@ -26,7 +27,7 @@ export default function BookDetailPage() {
   const router = useRouter();
 
   const bookId = params.id as string;
-  const sourceId = searchParams.get('source') || 'diyibanzhu';
+  const sourceId = searchParams.get('source') || '';
 
   const [book, setBook] = useState<BookDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,13 +109,13 @@ export default function BookDetailPage() {
           className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-500 hover:text-black transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          BACK TO BOOKSHELF
+          返回书架
         </Link>
 
         {loading ? (
           <div className="py-24 text-center">
             <div className="w-8 h-8 mx-auto border-2 border-black border-t-transparent rounded-full animate-spin mb-3" />
-            <p className="text-xs text-zinc-500 font-mono">LOADING NOVEL METADATA...</p>
+            <p className="text-xs text-zinc-500 font-mono">正在加载书籍信息...</p>
           </div>
         ) : error || !book ? (
           <div className="py-16 text-center text-zinc-500">
@@ -131,13 +132,15 @@ export default function BookDetailPage() {
             {/* Book Meta Card */}
             <div className="bg-white rounded-xl p-6 sm:p-8 border border-zinc-200 shadow-sm flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
               {/* Cover */}
-              <div className="w-36 sm:w-44 aspect-[2/3] bg-zinc-100 rounded-lg overflow-hidden shadow-sm border border-zinc-200 flex-shrink-0 mx-auto sm:mx-0">
+              <div className="w-36 sm:w-44 aspect-[2/3] bg-zinc-100 rounded-lg overflow-hidden shadow-sm border border-zinc-200 flex-shrink-0 mx-auto sm:mx-0 relative">
+                <BookCoverPlaceholder title={book.title} className="absolute inset-0" />
                 {book.cover ? (
                   <img
                     src={book.cover}
                     alt={book.title}
-                    className="w-full h-full object-cover"
+                    className="relative w-full h-full object-cover"
                     onError={(e) => {
+                      // Reveal the placeholder underneath instead of a broken image.
                       (e.target as HTMLElement).style.display = 'none';
                     }}
                   />
@@ -165,7 +168,7 @@ export default function BookDetailPage() {
                 <div className="flex flex-wrap gap-4 text-xs font-mono text-zinc-500 py-1">
                   <div className="flex items-center gap-1.5">
                     <Layers className="w-3.5 h-3.5 text-zinc-700" />
-                    <span>{book.chapters.length} CHAPTERS</span>
+                    <span>共 {book.chapters.length} 章</span>
                   </div>
                   {book.updateTime && (
                     <div className="flex items-center gap-1.5">
@@ -234,7 +237,7 @@ export default function BookDetailPage() {
                     <Bookmark className="w-4 h-4 text-black" />
                     正文章节目录
                     <span className="text-xs font-mono font-normal text-zinc-400">
-                      ({book.chapters.length} TOTAL)
+                      （共 {book.chapters.length} 章）
                     </span>
                   </h2>
                 </div>
@@ -278,7 +281,7 @@ export default function BookDetailPage() {
                       <span className="line-clamp-1 flex-1 pr-2">{ch.title}</span>
                       {isLastRead && (
                         <span className="text-[10px] bg-black text-white px-1.5 py-0.5 rounded font-mono font-normal flex-shrink-0">
-                          RECENT
+                          最近
                         </span>
                       )}
                     </Link>

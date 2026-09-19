@@ -15,7 +15,6 @@ export interface RuleSourceMeta {
   name: string;
   description: string;
   baseUrl: string;
-  mirrors?: string[];
   version?: string;
   publishUrl?: string;
 }
@@ -105,29 +104,23 @@ export class RuleBasedSource implements BookSource {
 
   constructor(config: RuleBookSourceConfig) {
     this.config = config;
-    const cleanBase = config.meta.baseUrl.replace(/\/+$/, '');
-    const cleanMirrors =
-      config.meta.mirrors && config.meta.mirrors.length > 0
-        ? config.meta.mirrors.map((m) => m.replace(/\/+$/, ''))
-        : [cleanBase];
 
     this.meta = {
       id: config.meta.id,
       name: config.meta.name,
       description: config.meta.description,
       version: config.meta.version || '1.0.0',
-      defaultMirror: cleanBase,
-      mirrors: cleanMirrors,
+      baseUrl: config.meta.baseUrl.replace(/\/+$/, ''),
       publishUrl: config.meta.publishUrl,
     };
   }
 
-  protected getBaseUrl(customMirror?: string): string {
-    return (customMirror || this.meta.defaultMirror).replace(/\/+$/, '');
+  protected getBaseUrl(): string {
+    return this.meta.baseUrl.replace(/\/+$/, '');
   }
 
-  public async search(keyword: string, customMirror?: string): Promise<SearchResult[]> {
-    const baseUrl = this.getBaseUrl(customMirror);
+  public async search(keyword: string): Promise<SearchResult[]> {
+    const baseUrl = this.getBaseUrl();
     const searchRule = this.config.search;
     const charset = searchRule.charset || 'utf-8';
     const method = searchRule.method || 'GET';
@@ -239,8 +232,8 @@ export class RuleBasedSource implements BookSource {
     }
   }
 
-  public async getDetail(bookId: string, customMirror?: string): Promise<BookDetail> {
-    const baseUrl = this.getBaseUrl(customMirror);
+  public async getDetail(bookId: string): Promise<BookDetail> {
+    const baseUrl = this.getBaseUrl();
     const detailRule = this.config.detail;
     const charset = detailRule.charset || 'utf-8';
 
@@ -363,12 +356,8 @@ export class RuleBasedSource implements BookSource {
     }
   }
 
-  public async getChapter(
-    bookId: string,
-    chapterId: string,
-    customMirror?: string
-  ): Promise<ChapterContent> {
-    const baseUrl = this.getBaseUrl(customMirror);
+  public async getChapter(bookId: string, chapterId: string): Promise<ChapterContent> {
+    const baseUrl = this.getBaseUrl();
     const chapterRule = this.config.chapter;
     const charset = chapterRule.charset || 'utf-8';
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { Bookshelf } from '@/components/Bookshelf';
+import { BookCoverPlaceholder } from '@/components/BookCoverPlaceholder';
 import { SearchResult, SourceMeta } from '@/sources/types';
 import { BookshelfItem, storage } from '@/lib/storage';
 import {
@@ -23,7 +24,7 @@ export default function HomePage() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [sources, setSources] = useState<SourceMeta[]>([]);
-  const [selectedSource, setSelectedSource] = useState<string>('diyibanzhu');
+  const [selectedSource, setSelectedSource] = useState<string>('');
   const [bookshelfItems, setBookshelfItems] = useState<BookshelfItem[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,7 +96,7 @@ export default function HomePage() {
         <section className="text-center max-w-2xl mx-auto space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 text-zinc-900 text-xs font-mono font-medium border border-zinc-200 shadow-sm">
             <Terminal className="w-3.5 h-3.5 text-zinc-900" />
-            PURE · NO-ADS · MULTI-SOURCE
+            纯净 · 无广告 · 多书源
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-zinc-950 tracking-tight">
             极简 · 高效 · 纯粹悦读
@@ -155,7 +156,7 @@ export default function HomePage() {
           <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
             <span className="text-xs text-zinc-400 flex items-center gap-1 font-mono">
               <Flame className="w-3.5 h-3.5 text-zinc-900" />
-              HOT:
+              热门：
             </span>
             {HOT_KEYWORDS.map((kw) => (
               <button
@@ -201,12 +202,14 @@ export default function HomePage() {
                     className="flex gap-3.5 p-3.5 bg-white rounded-xl border border-zinc-200 shadow-sm hover:shadow hover:border-black transition-all group"
                   >
                     <div className="w-20 aspect-[2/3] bg-zinc-100 rounded-lg overflow-hidden flex-shrink-0 relative border border-zinc-200">
+                      <BookCoverPlaceholder title={book.title} className="absolute inset-0" />
                       {book.cover ? (
                         <img
                           src={book.cover}
                           alt={book.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          className="relative w-full h-full object-cover group-hover:scale-105 transition-transform"
                           onError={(e) => {
+                            // Reveal the placeholder underneath instead of a broken image.
                             (e.target as HTMLElement).style.display = 'none';
                           }}
                         />
@@ -243,7 +246,7 @@ export default function HomePage() {
               我的书架
             </h2>
             <span className="text-xs text-zinc-500 font-mono">
-              COLLECTION: {bookshelfItems.length}
+              藏书 {bookshelfItems.length} 本
             </span>
           </div>
 
@@ -258,13 +261,13 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t border-zinc-200 py-6 text-center text-xs text-zinc-400 mt-auto bg-white">
         <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2 font-mono">
-          <span>CLEAN READER · PERSONAL TECH NOVEL READER</span>
+          <span>清阅 · 个人极简小说阅读器</span>
           <div className="flex items-center gap-4">
             <Link href="/sources" className="hover:text-zinc-800 transition-colors">
-              SOURCE ENGINE
+              书源引擎
             </Link>
             <span>·</span>
-            <span>NO-ADS · MONOCHROME TECH</span>
+            <span>无广告 · 极简黑白</span>
           </div>
         </div>
       </footer>

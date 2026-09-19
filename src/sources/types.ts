@@ -46,14 +46,14 @@ export interface SourceMeta {
   name: string;
   description: string;
   version: string;
-  defaultMirror: string;
-  mirrors: string[];
+  /** The site's base address. A source has exactly one. */
+  baseUrl: string;
   publishUrl?: string; // e.g. address publish page
 }
 
 export interface BookSource {
   meta: SourceMeta;
-  search(keyword: string, customMirror?: string): Promise<SearchResult[]>;
-  getDetail(bookId: string, customMirror?: string): Promise<BookDetail>;
-  getChapter(bookId: string, chapterId: string, customMirror?: string): Promise<ChapterContent>;
+  search(keyword: string): Promise<SearchResult[]>;
+  getDetail(bookId: string): Promise<BookDetail>;
+  getChapter(bookId: string, chapterId: string): Promise<ChapterContent>;
 }

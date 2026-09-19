@@ -13,6 +13,9 @@
 # production
 /build
 
+# server-side chapter relay cache (node:sqlite)
+/.cache/
+
 # misc
 .DS_Store
 *.pem

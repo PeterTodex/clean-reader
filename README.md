@@ -18,10 +18,10 @@
   - 🖤 **OLED 极致纯黑**（省电且纯粹深邃）
 - **📐 自由排版系统**：支持自由调节字号大小（14px~32px）、行间距、字体类型（衬线宋体 / 典雅楷体 / 现代黑体）、版心最大宽度（640px~1100px）以及滚动 / 分页阅读模式。
 - **⚡ 零延迟翻页（智能预加载）**：阅读当前章节时，后台静默预先加载下一章节并在内存中高速缓存，点击“下一章”瞬间完成切换。
-- **🌐 多书源与防屏蔽多镜像架构**：
-  - 首发内置 **第一版主 (diyibanzhu)** 适配器，集成官方发布页多条备用镜像线路（如 `m.37mx.com`, `m.zt51.com`, `m.917q.com`, `m.ct4k.com` 等）。
-  - **一键全线路延迟测速**：可视监控各镜像 ping 延迟（毫秒级别展示），支持实时切换首选线路与手动填入新域名。
-  - **标准化插件式书源接口**：易于扩展接入其它主流小说站（如 69书吧、笔趣阁等）。
+- **🌐 多书源插件架构**：
+  - 内置 **搬山人小说网** 与 **第一版主** 两个适配器，分别处理各自的站点特性（句子级分段还原 / 章节多页拼接与敏感字图像还原）。
+  - **标准化插件式书源接口**：新增书源只需在 `src/sources/plugins/` 放一个文件，无需改动其他代码；内置规则驱动引擎，也可在运行时导入自定义规则。
+- **🔄 章节中转缓存**：服务端把抓取过的章节正文存进本地 SQLite，同一章被任何人读过之后再读就直接命中缓存，不再重复请求源站——既降低被限流/封禁的风险，翻页也更快。零额外依赖（使用 Node 内置的 `node:sqlite`）。
 - **💾 本地化隐私书架与进度记录**：无需注册账号或上传云端，书籍收藏、阅读章节与精确进度均保存在本地浏览器中。
 
 ---
@@ -54,30 +54,63 @@ pnpm dev
 ```
 打开浏览器访问：`http://localhost:3000`
 
-### 3. 生产打包与运行
+### 3. 生产一键部署（推荐）
+
+在服务器拉取代码后，直接运行一键部署脚本即可（默认端口 `9527`，自动配置 1C1G Swap、安装 Node 22、构建并使用 PM2 守护）：
+
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+如需手动构建与运行：
 
 ```bash
 pnpm build
-pnpm start -p 3000
+pnpm start -p 9527
 ```
+
+> **运行环境要求 Node ≥ 22.5**（章节缓存使用 Node 内置的 `node:sqlite`，已写入 `package.json` 的 `engines`）。更低版本下服务仍可运行，但章节缓存会禁用并在启动日志中给出提示。
+
+---
+
+## 🔄 章节中转缓存
+
+服务端在 `/api/chapter` 与 TXT 导出两条路径上都做了中转：某章节第一次被请求时从源站抓取并写入本地 SQLite，之后任何请求都直接命中缓存，不再打源站。
+
+- 库文件默认在 `.cache/clean-reader.db`（已 gitignore），单文件、无需额外服务
+- 缓存键为 `(书源, 书籍, 章节)`
+- 章节正文发布后不会变化，默认 30 天后过期；容量默认上限 2000 章（实测单章约 121KB，合计约 240MB，够放下一整本长篇），超限按最久未使用淘汰
+- 抓取失败或正文异常的响应**不会**入库，避免一次抖动被长期放大
+
+可用环境变量调整：
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `CLEAN_READER_CACHE_DB` | `.cache/clean-reader.db` | 库文件路径 |
+| `CLEAN_READER_CACHE_MAX_ENTRIES` | `2000` | 最多缓存多少章（约 240MB） |
+| `CLEAN_READER_CACHE_TTL_MS` | `2592000000`（30 天） | 缓存有效期 |
+
+该缓存面向**自托管单实例**。只读文件系统（如 Vercel 等 serverless 平台）下无法写入；多实例部署时各实例各持一份，不会共享。
 
 ---
 
 ## 🔌 扩展新书源 (BookSource)
 
-项目将书源抽象为标准化的接口（`src/sources/types.ts`），只需几行代码即可接入新小说源：
+项目将书源抽象为标准化的接口（`src/sources/types.ts`），并且是**插件式**的：`src/sources/plugins/` 下每个文件就是一个书源，新增或删除都**不需要改动其他任何代码**。
+
+只需在 `src/sources/plugins/my-source.ts` 里写入实现并 `export default` 一个实例即可：
 
 ```typescript
-import { BookSource, SearchResult, BookDetail, ChapterContent } from './types';
+import { BookSource, SearchResult, BookDetail, ChapterContent } from '../types';
 
-export class MyCustomSource implements BookSource {
+class MyCustomSource implements BookSource {
   public meta = {
     id: 'my_source',
     name: '我的自定义源',
     description: '站点说明',
     version: '1.0.0',
-    defaultMirror: 'https://example.com',
-    mirrors: ['https://example.com'],
+    baseUrl: 'https://example.com',
   };
 
   async search(keyword: string): Promise<SearchResult[]> {
@@ -93,16 +126,40 @@ export class MyCustomSource implements BookSource {
     // 解析章节正文内容，清洗广告
   }
 }
+
+export default new MyCustomSource();
 ```
 
-随后在 `src/sources/index.ts` 中注册：
+如果目标站点的结构能用 CSS 选择器描述，还可以更省事——直接复用规则引擎，一个文件就是一行配置：
+
 ```typescript
-sourceRegistry.register(new MyCustomSource());
+import { RuleBasedSource } from '../rule-engine';
+
+export default new RuleBasedSource({
+  meta: { id: 'my_source', name: '我的自定义源', baseUrl: 'https://example.com' },
+  search: { url: '/search.php?keyword={keyword}', listSelector: '.result-item', /* … */ },
+  detail: { url: '/book/{id}/', /* … */ },
+  chapter: { url: '/book/{bookId}/{chapterId}.html', contentSelector: '#content', /* … */ },
+});
 ```
-前端界面将自动识别并展示新书源，供用户随意切换！
+
+前端界面会自动识别并展示新书源，供用户随意切换！删除书源同样只需删掉对应文件，应用不会因此出错。
+
+默认书源由插件**显式声明**，不受文件名排序影响——想让它成为无 `?source=` 参数时的回退目标，再加一行即可：
+
+```typescript
+export default new MyCustomSource();
+export const isDefault = true;   // 可选；不写就不会成为默认
+```
+
+同一时刻只应有一个插件声明 `isDefault`；若多个同时声明，注册表取先注册的那个并打英文警告。没有任何插件声明时，回退到首个注册的书源。
+
+> 自动发现基于 webpack 的 `require.context`，因此新增书源后需要重新构建才生效；该机制在 Turbopack 下不可用。
 
 ---
 
 ## ⚖️ 免责与使用声明
 
-本项目为个人学习交流与自用研究工具，不保存、不存储、不发布任何书籍文本版权数据。小说内容全部来源于互联网公开站点，请勿将解析服务公开发布或用于任何商业盈利用途。
+本项目为个人学习交流与自用研究工具，小说内容全部来源于互联网公开站点，请勿将解析服务公开发布或用于任何商业盈利用途。
+
+**关于服务端缓存**：为避免对源站的重复请求，服务端会把已抓取的章节正文持久化到本机（默认 `.cache/clean-reader.db`，见下文「章节中转缓存」）。该缓存仅存在于你自己部署的实例上，本项目不附带、也不提供任何公共的内容分发服务。若将该实例公开对外提供服务，由此产生的责任由部署者自行承担。

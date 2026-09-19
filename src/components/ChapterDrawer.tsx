@@ -51,7 +51,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
             <h3 className="font-bold text-zinc-950 text-sm flex items-center gap-2">
               <Bookmark className="w-4 h-4 text-black" />
               目录列表
-              <span className="text-xs font-mono font-normal text-zinc-400">({chapters.length} TOTAL)</span>
+              <span className="text-xs font-mono font-normal text-zinc-400">（共 {chapters.length} 章）</span>
             </h3>
           </div>
           <div className="flex items-center gap-2">
@@ -107,7 +107,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
                   <span className="line-clamp-1 flex-1 pr-2">{c.title}</span>
                   {isCurrent && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-black text-white font-mono font-normal flex-shrink-0">
-                      CURRENT
+                      当前
                     </span>
                   )}
                 </Link>

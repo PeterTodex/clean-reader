@@ -37,26 +37,57 @@ npx tsc --noEmit      # 类型检查；package.json 中没有 typecheck 脚本
 
 `axios`、`cheerio`、`iconv-lite` 仅在 `src/sources/**` 与 `src/lib/request.ts` 中被引入，这些代码运行在路由处理器内。API 路由就是客户端/服务端的分界线 —— 把上述任一依赖引入 `'use client'` 文件会导致构建失败。项目未引入 `server-only` 守卫包，这一约束仅靠约定维持。
 
-### 书源与镜像线路是如何串联的
+### 书源是如何串联的
 
-两者都以 URL 查询参数的形式传递，阅读页还额外增加了一层处理：
+`?source=<id>` 出现在所有书籍页/阅读页 URL 上，其优先级高于任何已存储的偏好。缺省（或为空串）时由 `getSource()` 回退到**被标记为默认的书源**，见下文。
 
-- `?source=<id>` 出现在所有书籍页/阅读页 URL 上（缺省时默认为 `diyibanzhu`），其优先级高于任何已存储的偏好。
-- `?mirror=<url>` 由阅读页从 `storage.getSettings().selectedMirror` 拼接到请求上（`src/app/read/[id]/[chapterId]/page.tsx:28-29`），因此在 `/sources` 页选定的线路会一路传递到章节请求。
-- 路由处理器把 `customMirror` 透传给适配器；每个适配器都通过 `getBaseUrl()` 解析它，并在缺省时回退到 `meta.defaultMirror`。
+**一个书源只有一个地址。** 没有 mirror / 线路切换机制——`SourceMeta.baseUrl` 就是站点根地址，适配器通过 `getBaseUrl()` 读取它并去掉尾斜杠。历史上曾有过"多镜像备用"，但那是建立在错误前提上的，已被移除，详见下面 `diyibanzhu` 插件里的注释。
+
+> 具体教训：发布页上并列的兄弟域名（`m.37mx.com`、`m.zt51.com`、`m.680t.com` …）跑的是同一套 CMS，但**每站用自己的域名作 URL 路径前缀**（`/37mx/`、`/zt51/`、`/680t/`）且**书 id 空间彼此独立**——一个 id 只在其中一站存在。把它们当镜像会导致 `https://m.zt51.com/37mx/1094730.html` 这种不可能存在的 URL。**新增书源时应把每个站点做成独立插件，而不是把它们塞进同一个书源的地址列表。**
 
 ## BookSource 书源层
 
-`src/sources/types.ts` 定义了契约：`search` / `getDetail` / `getChapter`，三者都接受一个可选的 `customMirror`。`SourceRegistry`（`src/sources/index.ts`）是在模块加载时实例化的单例；当传入的 id 不存在时，`getSource()` 会回退到 `diyibanzhu`。
+`src/sources/types.ts` 定义了契约：`search(keyword)` / `getDetail(bookId)` / `getChapter(bookId, chapterId)`。`SourceRegistry`（`src/sources/index.ts`）是在模块加载时实例化的单例。
 
-目前存在两种适配器实现方式：
+**默认书源由插件显式声明**，不靠文件名排序。想成为默认的插件模块导出：
 
-- **手写适配器** —— `src/sources/diyibanzhu.ts`。包含站点专属选择器，以及无法用配置表达的逻辑：遍历 `_2.html` / `_3.html` 子页并把它们拼接成完整的一章，以及通过 `CHAR_MAP` 还原源站用 `/zi/<code>.png` 图片替换掉的敏感字。
-- **配置驱动** —— `src/sources/rule-engine.ts`（`RuleBasedSource`）。一个 `RuleBookSourceConfig` 承载 CSS 选择器、id 正则、字符集、POST body 与广告过滤词；引擎负责关键词编码、URL 解析、选择器降级回退以及翻页链接提取。`BiqugeSource`（`src/sources/biquge.ts`）本质上就是 `RuleBasedSource` 叠加 `BIQUGE_CONFIG` 与用户覆写 —— **它是新增任何配置驱动书源的模板。**
+```ts
+export default new MySource();
+export const isDefault = true;
+```
 
-用户可以在运行时新增书源而无需重新部署：`registerCustomRule()` 会把一份 `RuleBookSourceConfig` 持久化到 localStorage 的 `clean_reader_custom_rules` 键下，并为它注册一个 `RuleBasedSource`。导入/导出辅助方法挂在注册表上。
+`SourceRegistry` 在发现阶段读取该标记并记下 `explicitDefaultId`；`getSource()` 在未指定 id 时回退到它。没有任何插件标记时回退到**首个注册的书源**，因此单插件场景（或标记写错时）仍然可用，且任何一个书源被单独删除都不会让应用崩。
 
-**新增一个书源的步骤：** 编写适配器（或为配置驱动路径编写一份 `RuleBookSourceConfig`），在 `SourceRegistry` 构造函数中注册它，并在 `src/sources/index.ts` 中重新导出。界面会自动从 `GET /api/sources` 读取并展示它。
+这样设计是因为**按字典序取首个太脆弱**：新增一个文件名排序靠前的插件会无声改变全站默认书源，对已存在的 `?source=` 书签而言是行为变化。`isDefault` 让"谁是默认"成为一处显式声明。（代价：新增默认书源要改两个文件——新插件加标记、旧插件删标记。这是刻意换取的明确性。）
+
+多个插件同时标记时只取先注册的那个并打英文 `console.warn`。`listSources()` 会把默认书源排到首位，这样 UI 的"第一项"与服务端回退目标始终一致。
+
+传入未知 id 时 `getSource()` 会先 `console.warn` 再回退，不会静默返回另一个书源的内容。
+
+### 书源是插件
+
+`src/sources/plugins/` 下的每个 `.ts` 文件就是一个书源。
+
+**插件契约：模块 `export default` 一个满足 `BookSource` 的实例**，可选再导出 `isDefault = true` 声明它是全站默认书源（见上一节）。注册表在构造函数中通过 `require.context('./plugins', false, /\.ts$/)` 自动发现，按 key 排序后依次注册——排序只为保证注册顺序确定，默认书源不依赖它。单个插件在加载时抛错、或 default 导出缺少合法 `meta.id` 时，只打印英文 `console.warn` 并跳过，不会拖垮整个注册表。
+
+两种实现方式都落在这个契约上：
+
+- **手写适配器** —— `src/sources/plugins/diyibanzhu.ts`（`第一版主`）与 `src/sources/plugins/banshanren.ts`（`搬山人小说网`，全站默认）。包含站点专属选择器，以及无法用配置表达的逻辑：第一版主要遍历 `_2.html` / `_3.html` 子页拼接成完整一章，并通过 `CHAR_MAP` 还原源站用 `/zi/<code>.png` 图片替换掉的敏感字；搬山人则要把站点按句切分的 `<p>` 还原成段落、剥离内联的评论徽章 `<span class="z">`、并识别截断正文的付费墙遮罩。文件末尾的 `export default new XxxSource()` 就是插件入口。
+- **配置驱动** —— `src/sources/rule-engine.ts`（`RuleBasedSource`）。一个 `RuleBookSourceConfig` 承载 CSS 选择器、id 正则、字符集、POST body 与广告过滤词；引擎负责关键词编码、URL 解析、选择器降级回退以及翻页链接提取。`RuleBasedSource` 的构造函数只接受一个 config 并自行派生 meta，所以**配置型插件就是一行**：`export default new RuleBasedSource({ meta, search, detail, chapter })`。
+
+**新增书源 = 往 `src/sources/plugins/` 放一个文件；删除书源 = 删掉那个文件。** 不需要改 `index.ts`，也不需要改任何其他代码。界面会自动从 `GET /api/sources` 读取并展示。
+
+注意 `GET /api/sources` 是全项目**唯一被静态预渲染的 API 路由**（构建产物里是 `○ (Static)`），`sourceRegistry` 在 `next build` 期间求值并固化。因此新增或删除插件后**必须重新构建**才生效，这是预期行为而非缺陷。`next dev` 会监听目录、新文件立即生效，与 `next build` 的答案不同——验证插件是否真的被发现，要固定用 `pnpm build` 后查 `.next/server/app/api/sources.body`，而不是 `curl` dev server。
+
+上面那条 `try/catch` 只能隔离**运行时**错误（模块顶层抛错、`meta.id` 非法、重复 id）。插件里的**语法或类型错误会让整个构建失败**——context module 编译不过会沿着 `index.ts` 波及全部 5 个 API 路由。这是构建期发现机制的固有代价，靠部署前必跑 `npx tsc --noEmit` 与 `pnpm build` 兜住，不要误以为漏写了 try/catch。
+
+运行时（浏览器端）还能通过 localStorage 新增书源而无需重新部署：`registerCustomRule()` 把一份 `RuleBookSourceConfig` 存到 `clean_reader_custom_rules` 键下并注册对应的 `RuleBasedSource`，导入/导出辅助方法挂在注册表上。这条路径只在前端生效，服务端不受影响。
+
+### 自动发现依赖 webpack，不兼容 Turbopack
+
+`require.context` 是 webpack 专有 API，类型声明见 `src/types/webpack-require-context.d.ts`（项目未安装 `@types/webpack-env`，该文件把 `context` 合并进全局 `NodeJS.Require`）。
+
+项目当前用 webpack 构建，但 **`require.context` 在 Turbopack 下不工作**：若启用 `next dev --turbo`，或将来升级到默认使用 Turbopack 的 Next 版本，插件目录会静默变成空列表（`getSource()` 随后抛 `No book sources registered`）。届时需要改用 `import.meta.webpackContext`，或退回显式的插件清单。
 
 ### 抓取本身就是在对抗性环境中工作 —— 代码看起来"防御性很强"是正常的
 
@@ -71,9 +102,38 @@ npx tsc --noEmit      # 类型检查；package.json 中没有 typecheck 脚本
 
 适配器同时返回 `content`（用 `<p>` 拼接的 HTML 字符串）与 `paragraphs`（数组）。`ReaderView` 通过 `dangerouslySetInnerHTML` 逐段渲染的是 **`paragraphs`** —— 阅读器并不使用 `content`。适配器是唯一的净化层，因此在那里新增的任何处理都必须在返回前剥离 script/style/标签。
 
+## 服务端章节中转缓存
+
+`src/lib/chapter-cache.ts` 把服务端变成**中转站**：某章节第一次被请求时抓取第三方并落库，之后所有请求（无论来自哪个浏览器）都直接由本地 SQLite 返回，不再打源站。没有用户概念，键是全局的 `(sourceId, bookId, chapterId)`。
+
+- **存储是 `node:sqlite`**（Node ≥ 22.5 的内置模块，`package.json` 的 `engines` 已声明）。零新依赖。库文件在 `.cache/clean-reader.db`，已被 gitignore，可用 `CLEAN_READER_CACHE_DB` 覆盖路径。
+- **必须写 `import ... from 'node:sqlite'`**。`module.builtinModules` 里只有带前缀的形式，裸名 `sqlite` 不存在，写成裸名会直接解析失败。
+- **单例连接缓存在 `globalThis` 上**，避免 `next dev` 热重载反复打开句柄导致泄漏。
+- **键用解析后的 `source.meta.id`**，不是 URL 上的原始 `sourceId`。`getSource()` 在 id 未知时会回退到默认书源，若用原始 id 作键，`?source=已删除的源` 会把内容错误地写到那个不存在的 id 下。
+- **缓存键只含 `(sourceId, bookId, chapterId)`**：书源只有一个地址，没有镜像维度需要区分。
+- **质量闸门（最关键的一点）**：`paragraphs` 为空或正文短于 100 字符时**拒绝写入**，抓取抛错时也不写。在共享缓存里一条坏数据不是一次坏响应，而是**所有后续用户在整个 TTL 内都会命中的坏响应**。
+- **并发防击穿**：模块级 `Map` 做 in-flight 去重，`/api/chapter` 与 TXT 导出共享同一个 Map，所以两条路径也能互相去重。promise 在 `finally` 中清理——遗漏这条会让一次失败永久毒化该章节。
+- TTL 默认 30 天（正文实际不可变，TTL 是给漏放坏数据自愈用的）；容量上限默认 2000 章，按 `last_access` 淘汰。**实测单章约 121KB（UTF-8 字节）**，2000 章约 240MB。两者分别可用 `CLEAN_READER_CACHE_TTL_MS`、`CLEAN_READER_CACHE_MAX_ENTRIES` 覆盖。
+  - 量体积时注意：SQLite 的 `length()` 作用于 TEXT 返回的是**字符数**，中文下比字节数小约 3 倍，用它做容量估算会严重低估。
+  - payload 里约一半是 `content` 字段（`paragraphs` 的 HTML 拼接，两个适配器都写 `paragraphs.map(p => \`<p>${p}</p>\`).join('\n')`），而**全项目没有任何地方读它**。存全量是为了让缓存命中与未命中返回形状完全一致——要省这一半空间就得接受"命中时的 `content` 由缓存重算"，并把它变成适配器必须遵守的约定。
+- `last_access` 采用**粗粒度更新**（距上次超过 1 小时才写）。这不是可选的优化：WAL 的写入单位是 4KB 页，每次命中都 touch 会让读路径产生与命中率成正比的磁盘写与锁竞争，且发生在最需要低延迟的地方。
+- **`schema_version` 列**：`payload` 存的是序列化对象，给 `ChapterContent` 增删字段后**旧行仍能 `JSON.parse` 成功**，只是缺字段——类型断言骗过编译器、渲染空白页、没有任何日志指向缓存。任何改动 `ChapterContent` 形状的提交都必须同时递增 `SCHEMA_VERSION`，不匹配的行在首次被读到时自动删除重取。
+- **`busy_timeout` 默认是 0**，即锁冲突立即抛 `SQLITE_BUSY` 而不等待。适配器构造时已显式传 `{ timeout: 5000 }`；少了它，多进程共用同一库文件时偶发的锁冲突会被 catch 成"缓存未命中"，**缓存收益在最需要的时候静默消失**。
+- 打不开库（只读文件系统等）会**闩锁**并只告警一次，避免每个请求都重试并刷屏日志。
+
+**两个接入点**：`src/app/api/chapter/route.ts`（响应头带 `X-Cache: HIT|MISS`，便于用 curl 验证）与 `src/app/api/export/txt/route.ts` 的 `fetchChapterWithRetry`（整本导出会连续拉几百章，是收益最大的复用点）。
+
+**服务端专属**：`chapter-cache.ts` 引入了 `node:sqlite`，绝不能出现在 `'use client'` 文件中。项目未装 `server-only` 包，这条约束与 `axios`/`cheerio` 一样仅靠约定维持。
+
+**部署限制**：面向自托管单实例。只读文件系统（如 Vercel 等 serverless）下缓存不可用；多实例部署时各实例持有独立缓存，不会共享。
+
+`node:sqlite` 的类型是手写的（`src/types/node-sqlite.d.ts`），因为项目固定在 `@types/node@^20`，该版本早于 `node:sqlite`。若将 `@types/node` 升到 ≥ 22，应删掉那个文件。
+
 ## 客户端状态
 
 `src/lib/storage.ts` 是**应用状态 localStorage 的唯一归属者** —— 没有其他模块碰它，项目里也没有 `storage` 事件监听、Context 或 SWR。组件在挂载/打开时读取，并通过 prop 回调刷新，因此跨标签页与跨组件的更新不会自动传播。所有读取都用 `typeof window === 'undefined'` 做了 SSR 保护。
+
+（章节正文的服务端缓存不属于这一层，见上一节。`ReaderView` 里还有一个**纯内存**的 `chapterCacheRef`，只服务于单次会话内的即时翻页，刷新即失效——它不持久化，与服务端缓存互不冲突。）
 
 键名：`clean_reader_bookshelf`、`clean_reader_settings`、`clean_reader_bookmarks`，外加 `src/sources/index.ts` 中的 `clean_reader_custom_rules`。书籍在全项目范围内都由 **`(id, sourceId)` 二元组**标识 —— 同一本书 id 出现在两个书源上即为两本书。
 

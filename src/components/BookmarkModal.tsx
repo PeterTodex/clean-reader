@@ -83,7 +83,7 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({
           <h3 className="font-bold text-base text-zinc-950 flex items-center gap-2">
             <Bookmark className="w-4 h-4 text-black" />
             书签与批注管理
-            <span className="text-xs font-mono font-normal text-zinc-400">({bookmarks.length} TOTAL)</span>
+            <span className="text-xs font-mono font-normal text-zinc-400">（共 {bookmarks.length} 条）</span>
           </h3>
           <button
             onClick={onClose}
@@ -97,7 +97,7 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({
         <div className="p-4 bg-zinc-50 border-b border-zinc-200">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-mono text-zinc-400 font-medium">CURRENT CHAPTER</div>
+              <div className="text-[11px] font-mono text-zinc-400 font-medium">当前章节</div>
               <div className="text-xs font-bold text-zinc-900 truncate mt-0.5">{currentChapterTitle}</div>
             </div>
             <button
@@ -158,7 +158,7 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({
           {bookmarks.length === 0 ? (
             <div className="py-12 text-center flex flex-col items-center justify-center text-zinc-400 gap-2 font-mono">
               <Bookmark className="w-8 h-8 stroke-[1.5] text-zinc-300" />
-              <p className="text-xs">NO BOOKMARKS YET</p>
+              <p className="text-xs">暂无书签</p>
               <p className="text-[11px] text-zinc-400">点击上方按钮即可在当前章节留下印记</p>
             </div>
           ) : (
@@ -180,7 +180,7 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({
                       <span className="font-medium text-xs text-zinc-900 line-clamp-1">{bm.chapterTitle}</span>
                       {isCurrent && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-black text-white font-mono flex-shrink-0">
-                          ACTIVE
+                          当前
                         </span>
                       )}
                     </div>

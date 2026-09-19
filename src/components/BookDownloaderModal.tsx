@@ -125,8 +125,6 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
     abortControllerRef.current = controller;
 
     try {
-      const mirror = storage.getSettings().selectedMirror || undefined;
-
       const response = await fetch('/api/export/txt', {
         method: 'POST',
         headers: {
@@ -135,7 +133,6 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
         body: JSON.stringify({
           bookId: book.id,
           sourceId,
-          mirror,
           chapterIds,
         }),
         signal: controller.signal,
@@ -312,7 +309,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
               {/* Option Selector */}
               <div className="space-y-2">
                 <label className="text-xs font-mono font-semibold text-zinc-500 uppercase tracking-wider block">
-                  RANGE / 下载范围
+                  下载范围
                 </label>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -332,7 +329,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                       </div>
                       {mode === 'all' && <Check className="w-4 h-4 text-black" />}
                     </div>
-                    <p className="text-[11px] text-zinc-500 font-mono">ALL {totalChapters} CHAPTERS</p>
+                    <p className="text-[11px] text-zinc-500 font-mono">全部 {totalChapters} 章</p>
                   </button>
 
                   <button
@@ -351,7 +348,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                       </div>
                       {mode === 'range' && <Check className="w-4 h-4 text-black" />}
                     </div>
-                    <p className="text-[11px] text-zinc-500 font-mono">CUSTOM RANGE</p>
+                    <p className="text-[11px] text-zinc-500 font-mono">自定义起止章节</p>
                   </button>
                 </div>
               </div>
@@ -462,7 +459,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                 </div>
                 <h4 className="font-bold text-sm text-zinc-950">正在下载与排版章节...</h4>
                 <p className="text-xs text-zinc-500 font-mono">
-                  PARSING CHAPTERS & REMOVING ADS
+                  正在解析章节并过滤广告
                 </p>
               </div>
 
@@ -505,7 +502,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
               <div>
                 <h4 className="font-bold text-sm text-zinc-950">导出完成！</h4>
                 <p className="text-xs text-zinc-500 mt-1 font-mono">
-                  EXPORTED {progress.total} CHAPTERS TO TXT
+                  已导出 {progress.total} 章至 TXT 文件
                 </p>
               </div>
 
@@ -516,7 +513,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                     <span className="truncate">{lastBlob.filename}</span>
                   </div>
                   <div className="text-[11px] text-zinc-400 font-mono">
-                    {(lastBlob.blob.size / 1024).toFixed(1)} KB · UTF-8 PLAIN TEXT
+                    {(lastBlob.blob.size / 1024).toFixed(1)} KB · UTF-8 纯文本
                   </div>
                 </div>
               )}

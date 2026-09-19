@@ -19,7 +19,6 @@ export interface ReaderSettings {
   maxWidth: number;
   readingMode: 'scroll' | 'page';
   autoPreloadNext: boolean;
-  selectedMirror?: string;
 }
 
 export const DEFAULT_READER_SETTINGS: ReaderSettings = {
@@ -30,7 +29,6 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   maxWidth: 820,
   readingMode: 'scroll',
   autoPreloadNext: true,
-  selectedMirror: '',
 };
 
 export interface BookmarkItem {

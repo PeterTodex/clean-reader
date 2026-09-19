@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { ReaderView } from '@/components/ReaderView';
 import { ChapterContent, ChapterItem, BookDetail } from '@/sources/types';
-import { storage } from '@/lib/storage';
 import Link from 'next/link';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 
@@ -14,42 +13,25 @@ export default function ReaderPage() {
 
   const bookId = params.id as string;
   const chapterId = params.chapterId as string;
-  const sourceId = searchParams.get('source') || 'diyibanzhu';
+  const sourceId = searchParams.get('source') || '';
 
   const [chapter, setChapter] = useState<ChapterContent | null>(null);
   const [book, setBook] = useState<BookDetail | null>(null);
-  const [availableMirrors, setAvailableMirrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!bookId || !chapterId) return;
 
-    const settings = storage.getSettings();
-    const mirrorParam = settings.selectedMirror ? `&mirror=${encodeURIComponent(settings.selectedMirror)}` : '';
-
     setLoading(true);
     setError(null);
 
-    // Fetch sources to get available mirrors
-    fetch('/api/sources')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.data) {
-          const currentSource = data.data.find((s: any) => s.id === sourceId);
-          if (currentSource?.mirrors) {
-            setAvailableMirrors(currentSource.mirrors);
-          }
-        }
-      })
-      .catch(() => {});
-
     // Fetch chapter and book detail in parallel
     Promise.all([
-      fetch(`/api/chapter?bookId=${bookId}&chapterId=${chapterId}&source=${sourceId}${mirrorParam}`).then((res) =>
+      fetch(`/api/chapter?bookId=${bookId}&chapterId=${chapterId}&source=${sourceId}`).then((res) =>
         res.json()
       ),
-      fetch(`/api/book?id=${bookId}&source=${sourceId}${mirrorParam}`).then((res) => res.json()),
+      fetch(`/api/book?id=${bookId}&source=${sourceId}`).then((res) => res.json()),
     ])
       .then(([chapterData, bookData]) => {
         if (!chapterData.success) {
@@ -74,7 +56,7 @@ export default function ReaderPage() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafafa] text-zinc-800">
         <div className="w-9 h-9 border-2 border-black border-t-transparent rounded-full animate-spin mb-3" />
         <h3 className="font-bold text-sm mb-1 tracking-tight">正在净化排版并加载正文...</h3>
-        <p className="text-xs text-zinc-400 font-mono">AD-FREE FILTERING · AUTO STITCHING</p>
+        <p className="text-xs text-zinc-400 font-mono">无广告过滤 · 章节智能拼接</p>
       </div>
     );
   }
@@ -119,7 +101,6 @@ export default function ReaderPage() {
       bookCover={book?.cover}
       bookAuthor={book?.author}
       sourceId={sourceId}
-      availableMirrors={availableMirrors}
     />
   );
 }

@@ -1,6 +1,4 @@
 import { BookSource, SourceMeta } from './types';
-import { DiyibanzhuSource } from './diyibanzhu';
-import { BiqugeSource, BIQUGE_CONFIG } from './biquge';
 import {
   RuleBasedSource,
   RuleBookSourceConfig,
@@ -12,14 +10,92 @@ import {
 
 const CUSTOM_RULES_STORAGE_KEY = 'clean_reader_custom_rules';
 
+/** Shape a plugin module must satisfy: a default-exported BookSource instance. */
+interface PluginModule {
+  default?: BookSource;
+  /**
+   * Optional module-level flag nominating this source as the application default — the one used
+   * when a request carries no `?source=`. Without it the default would be whichever file happens
+   * to sort first, so adding a plugin could silently change global behaviour.
+   */
+  isDefault?: boolean;
+}
+
 export class SourceRegistry {
   private sources: Map<string, BookSource> = new Map();
-  private defaultSourceId: string = 'diyibanzhu';
+  /** Set by the plugin that exports `isDefault`. Falls back to the first registered source. */
+  private explicitDefaultId?: string;
 
   constructor() {
-    this.register(new DiyibanzhuSource());
-    this.register(new BiqugeSource());
+    this.discoverPlugins();
     this.loadCustomRules();
+
+    // An empty plugins/ directory resolves to an empty context without erroring, which would
+    // otherwise surface only as every API route failing at request time.
+    if (this.sources.size === 0) {
+      console.warn(
+        '[SourceRegistry] No book sources registered. Add a plugin to src/sources/plugins/ and rebuild.'
+      );
+    }
+  }
+
+  /**
+   * Register every module in ./plugins whose default export is a BookSource.
+   *
+   * Webpack resolves this context at build time, so dropping a file into the directory is the
+   * only step needed to add a source, and deleting it is the only step needed to remove one —
+   * there is deliberately no central registration list to keep in sync.
+   *
+   * A plugin that throws while loading, or that does not default-export a valid source, is
+   * skipped with a warning rather than taking down the whole registry.
+   */
+  private discoverPlugins(): void {
+    const context = require.context('./plugins', false, /\.ts$/);
+    for (const key of context.keys().sort()) {
+      try {
+        const mod = context<PluginModule>(key);
+        const source = mod?.default;
+        if (!source || typeof source !== 'object' || !source.meta?.id) {
+          console.warn(
+            `[SourceRegistry] Skipping plugin '${key}': default export is not a BookSource with a meta.id`
+          );
+          continue;
+        }
+        if (this.sources.has(source.meta.id)) {
+          console.warn(
+            `[SourceRegistry] Plugin '${key}' re-registers source id '${source.meta.id}'; replacing the earlier one`
+          );
+        }
+        if (mod.isDefault) {
+          if (this.explicitDefaultId) {
+            console.warn(
+              `[SourceRegistry] Both '${this.explicitDefaultId}' and '${source.meta.id}' declare isDefault; keeping '${this.explicitDefaultId}'`
+            );
+          } else {
+            this.explicitDefaultId = source.meta.id;
+          }
+        }
+        this.register(source);
+      } catch (err: any) {
+        console.warn(`[SourceRegistry] Failed to load plugin '${key}':`, err?.message || err);
+      }
+    }
+  }
+
+  /**
+   * The source used when a request carries no `?source=`.
+   *
+   * Prefers the plugin that exports `isDefault`, so adding or renaming a plugin can't change the
+   * default by accident. Falls back to the first registered source, so a registry with no
+   * explicit default (or a mislabelled one) still works — and any single plugin can be deleted
+   * without breaking the fallback.
+   */
+  public getDefaultSourceId(): string | undefined {
+    if (this.explicitDefaultId && this.sources.has(this.explicitDefaultId)) {
+      return this.explicitDefaultId;
+    }
+    const first = this.sources.keys().next();
+    return first.done ? undefined : first.value;
   }
 
   public register(source: BookSource): void {
@@ -31,21 +107,39 @@ export class SourceRegistry {
   }
 
   public getSource(id?: string): BookSource {
-    const targetId = id || this.defaultSourceId;
-    const source = this.sources.get(targetId);
-    if (!source) {
-      // Fallback to default
-      const fallback = this.sources.get(this.defaultSourceId);
-      if (!fallback) {
-        throw new Error(`Book source '${targetId}' not found and default source missing`);
-      }
-      return fallback;
+    const fallbackId = this.getDefaultSourceId();
+    if (!fallbackId) {
+      throw new Error('No book sources registered');
     }
-    return source;
+
+    const targetId = id || fallbackId;
+    const source = this.sources.get(targetId);
+    if (source) {
+      return source;
+    }
+
+    // Stale links (a source that was removed, or a typo) still resolve, but never silently.
+    console.warn(
+      `[SourceRegistry] Unknown book source '${targetId}', falling back to '${fallbackId}'`
+    );
+    const fallback = this.sources.get(fallbackId);
+    if (!fallback) {
+      throw new Error('No book sources registered');
+    }
+    return fallback;
   }
 
+  /**
+   * Listed with the default source first, so the UI's "first entry" is the same source the server
+   * falls back to when a request omits `?source=`.
+   */
   public listSources(): SourceMeta[] {
-    return Array.from(this.sources.values()).map((s) => s.meta);
+    const defaultId = this.getDefaultSourceId();
+    const all = Array.from(this.sources.values());
+    all.sort((a, b) =>
+      a.meta.id === defaultId ? -1 : b.meta.id === defaultId ? 1 : 0
+    );
+    return all.map((s) => s.meta);
   }
 
   public hasSource(id: string): boolean {
@@ -159,9 +253,7 @@ export class SourceRegistry {
 
 export const sourceRegistry = new SourceRegistry();
 
-// Export sources
-export { DiyibanzhuSource } from './diyibanzhu';
-export { BiqugeSource, BIQUGE_CONFIG } from './biquge';
+// Export rule engine
 export {
   RuleBasedSource,
   type RuleBookSourceConfig,

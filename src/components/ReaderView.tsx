@@ -29,7 +29,6 @@ interface ReaderViewProps {
   bookCover?: string;
   bookAuthor?: string;
   sourceId: string;
-  availableMirrors?: string[];
 }
 
 export const ReaderView: React.FC<ReaderViewProps> = ({
@@ -39,7 +38,6 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   bookCover = '',
   bookAuthor = '',
   sourceId,
-  availableMirrors = [],
 }) => {
   const router = useRouter();
   const [chapter, setChapter] = useState<ChapterContent>(initialChapter);
@@ -115,9 +113,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     async (nextId: string | null) => {
       if (!nextId || chapterCacheRef.current.has(nextId)) return;
       try {
-        const mirrorParam = settings.selectedMirror ? `&mirror=${encodeURIComponent(settings.selectedMirror)}` : '';
         const res = await fetch(
-          `/api/chapter?bookId=${chapter.bookId}&chapterId=${nextId}&source=${sourceId}${mirrorParam}`
+          `/api/chapter?bookId=${chapter.bookId}&chapterId=${nextId}&source=${sourceId}`
         );
         const data = await res.json();
         if (data.success && data.data) {
@@ -127,7 +124,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         // Silently fail prefetch
       }
     },
-    [chapter.bookId, sourceId, settings.selectedMirror]
+    [chapter.bookId, sourceId]
   );
 
   useEffect(() => {
@@ -152,9 +149,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
       setIsLoading(true);
       try {
-        const mirrorParam = settings.selectedMirror ? `&mirror=${encodeURIComponent(settings.selectedMirror)}` : '';
         const res = await fetch(
-          `/api/chapter?bookId=${chapter.bookId}&chapterId=${targetChapterId}&source=${sourceId}${mirrorParam}`
+          `/api/chapter?bookId=${chapter.bookId}&chapterId=${targetChapterId}&source=${sourceId}`
         );
         const data = await res.json();
         if (data.success && data.data) {
@@ -171,7 +167,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         setIsLoading(false);
       }
     },
-    [chapter.bookId, sourceId, settings.selectedMirror, isLoading, router]
+    [chapter.bookId, sourceId, isLoading, router]
   );
 
   // TTS next chapter auto trigger
@@ -452,7 +448,6 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         onClose={() => setShowSettingsModal(false)}
         settings={settings}
         onUpdateSettings={handleUpdateSettings}
-        availableMirrors={availableMirrors}
       />
 
       {/* Bookmark Modal */}

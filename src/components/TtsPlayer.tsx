@@ -334,7 +334,7 @@ export const TtsPlayer: React.FC<TtsPlayerProps> = ({
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-black text-white font-mono text-[11px] font-medium flex-shrink-0">
             <Headphones className={`w-3.5 h-3.5 ${isPlaying && !isPaused ? 'animate-pulse text-white' : ''}`} />
-            <span>TTS</span>
+            <span>听书</span>
           </div>
           <span className="font-semibold truncate text-stone-700 dark:text-stone-200">
             {chapterTitle}

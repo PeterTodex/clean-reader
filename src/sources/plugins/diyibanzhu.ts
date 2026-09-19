@@ -1,8 +1,8 @@
 import * as cheerio from 'cheerio';
-import { BookSource, SourceMeta, SearchResult, BookDetail, ChapterItem, ChapterContent } from './types';
+import { BookSource, SourceMeta, SearchResult, BookDetail, ChapterItem, ChapterContent } from '../types';
 import { fetchHtml, buildProxiedImageUrl } from '@/lib/request';
 
-// Known sensitive character map used by diyibanzhu mirrors
+// Known sensitive character map used by the source site
 const CHAR_MAP: Record<string, string> = {
   'a1': '爱',
   'r1': '肉',
@@ -31,34 +31,33 @@ const CHAR_MAP: Record<string, string> = {
   'g1': '高',
 };
 
-const DEFAULT_MIRRORS = [
-  'https://m.37mx.com',
-  'https://m.zt51.com',
-  'https://m.917q.com',
-  'https://m.ct4k.com',
-  'https://m.13ye.com',
-  'https://m.dss7.com',
-  'https://m.e-yp.com',
-  'https://m.680t.com',
-];
+/**
+ * The only address this source reads from.
+ *
+ * The sibling domains advertised on the publish page (`m.zt51.com`, `m.680t.com`, …) are NOT
+ * mirrors: they run the same CMS but each uses its own URL path prefix derived from its own
+ * domain (`/zt51/…`, `/680t/…`) and keeps a **separate book-id space** — an id resolves on
+ * exactly one of them. Treating them as interchangeable produced URLs like
+ * `https://m.zt51.com/37mx/1094730.html`, which cannot exist.
+ */
+const BASE_URL = 'https://m.37mx.com';
 
 export class DiyibanzhuSource implements BookSource {
   public meta: SourceMeta = {
     id: 'diyibanzhu',
-    name: '第一版主 (多镜像备用)',
-    description: '支持最新第一版主镜像站点，内置防屏蔽多线路与章节自动拼接',
-    version: '1.2.0',
-    defaultMirror: DEFAULT_MIRRORS[0],
-    mirrors: DEFAULT_MIRRORS,
+    name: '第一版主',
+    description: '第一版主站点适配，支持章节多页自动拼接与敏感字图像还原',
+    version: '1.3.0',
+    baseUrl: BASE_URL,
     publishUrl: 'https://dybzwz.us',
   };
 
-  private getBaseUrl(customMirror?: string): string {
-    return (customMirror || this.meta.defaultMirror).replace(/\/$/, '');
+  private getBaseUrl(): string {
+    return this.meta.baseUrl.replace(/\/$/, '');
   }
 
-  public async search(keyword: string, customMirror?: string): Promise<SearchResult[]> {
-    const baseUrl = this.getBaseUrl(customMirror);
+  public async search(keyword: string): Promise<SearchResult[]> {
+    const baseUrl = this.getBaseUrl();
     const searchUrl = `${baseUrl}/search/?searchkey=${encodeURIComponent(keyword)}`;
 
     try {
@@ -107,8 +106,8 @@ export class DiyibanzhuSource implements BookSource {
     }
   }
 
-  public async getDetail(bookId: string, customMirror?: string): Promise<BookDetail> {
-    const baseUrl = this.getBaseUrl(customMirror);
+  public async getDetail(bookId: string): Promise<BookDetail> {
+    const baseUrl = this.getBaseUrl();
     const detailUrl = `${baseUrl}/37mx/${bookId}.html`;
     const catalogUrl = `${baseUrl}/book/${bookId}.html`;
 
@@ -208,12 +207,8 @@ export class DiyibanzhuSource implements BookSource {
     }
   }
 
-  public async getChapter(
-    bookId: string,
-    chapterId: string,
-    customMirror?: string
-  ): Promise<ChapterContent> {
-    const baseUrl = this.getBaseUrl(customMirror);
+  public async getChapter(bookId: string, chapterId: string): Promise<ChapterContent> {
+    const baseUrl = this.getBaseUrl();
     let currentChapterUrl = `${baseUrl}/37mx/${bookId}/${chapterId}.html`;
     let title = '';
     const paragraphs: string[] = [];
@@ -341,3 +336,6 @@ export class DiyibanzhuSource implements BookSource {
     return text;
   }
 }
+
+// Plugin entry point \u2014 the registry auto-discovers the default export of every file in this directory.
+export default new DiyibanzhuSource();

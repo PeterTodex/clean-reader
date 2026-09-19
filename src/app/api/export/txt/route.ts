@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sourceRegistry } from '@/sources';
 import { ChapterItem } from '@/sources/types';
+import { fetchChapterWithCache } from '@/lib/chapter-cache';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes max duration
@@ -117,29 +118,46 @@ async function fetchChapterWithRetry(
   source: any,
   bookId: string,
   chapterId: string,
-  mirror?: string,
   maxRetries = 2
 ) {
-  let lastErr: any = null;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await source.getChapter(bookId, chapterId, mirror);
-    } catch (err: any) {
-      lastErr = err;
-      if (attempt < maxRetries) {
-        await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+  const fetchFromSource = async () => {
+    let lastErr: any = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await source.getChapter(bookId, chapterId);
+      } catch (err: any) {
+        lastErr = err;
+        if (attempt < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+        }
       }
     }
+    throw lastErr ?? new Error(`Failed to fetch chapter ${chapterId}`);
+  };
+
+  try {
+    // Routed through the relay cache: exporting a whole book pulls hundreds of chapters, and
+    // anything already read (or already exported) should not hit the source site again.
+    const { content } = await fetchChapterWithCache(
+      source.meta.id,
+      bookId,
+      chapterId,
+      fetchFromSource
+    );
+    return content;
+  } catch (err: any) {
+    console.warn(
+      `[export/txt] Failed to fetch chapter ${chapterId} after ${maxRetries + 1} attempts:`,
+      err?.message || err
+    );
+    return null;
   }
-  console.warn(`[export/txt] Failed to fetch chapter ${chapterId} after ${maxRetries + 1} attempts:`, lastErr?.message);
-  return null;
 }
 
 export async function POST(req: NextRequest) {
   let body: {
     bookId?: string;
     sourceId?: string;
-    mirror?: string;
     chapterIds?: string[];
   };
 
@@ -149,7 +167,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: '无效的 JSON 请求体' }, { status: 400 });
   }
 
-  const { bookId, sourceId = 'diyibanzhu', mirror, chapterIds } = body;
+  const { bookId, sourceId, chapterIds } = body;
 
   if (!bookId) {
     return NextResponse.json({ success: false, error: '书籍 ID 不能为空' }, { status: 400 });
@@ -164,7 +182,7 @@ export async function POST(req: NextRequest) {
 
   let detail;
   try {
-    detail = await source.getDetail(bookId, mirror);
+    detail = await source.getDetail(bookId);
   } catch (err: any) {
     return NextResponse.json({ success: false, error: `获取书籍详情失败: ${err.message}` }, { status: 500 });
   }
@@ -215,7 +233,7 @@ export async function POST(req: NextRequest) {
           const batch = targetChapters.slice(i, i + BATCH_SIZE);
           const results = await Promise.all(
             batch.map(async (ch) => {
-              const content = await fetchChapterWithRetry(source, bookId, ch.id, mirror);
+              const content = await fetchChapterWithRetry(source, bookId, ch.id);
               return { ch, content };
             })
           );

@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { BookshelfItem, storage } from '@/lib/storage';
 import { BookMarked, Trash2, ArrowRight, BookOpen } from 'lucide-react';
+import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 
 interface BookshelfProps {
   items: BookshelfItem[];
@@ -56,19 +57,21 @@ export const Bookshelf: React.FC<BookshelfProps> = ({ items, onRefresh, onOpenSe
           >
             {/* Book Cover */}
             <Link href={readHref} className="relative aspect-[2/3] w-full bg-zinc-100 overflow-hidden block border-b border-zinc-100">
+              <BookCoverPlaceholder title={book.title} className="absolute inset-0" />
               {book.cover ? (
                 <img
                   src={book.cover}
                   alt={book.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="relative w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   onError={(e) => {
+                    // Reveal the placeholder underneath instead of a broken image.
                     (e.target as HTMLElement).style.display = 'none';
                   }}
                 />
               ) : null}
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2.5">
                 <span className="text-white text-xs font-medium flex items-center gap-1 font-mono">
-                  RESUME <ArrowRight className="w-3 h-3" />
+                  继续阅读 <ArrowRight className="w-3 h-3" />
                 </span>
               </div>
             </Link>
