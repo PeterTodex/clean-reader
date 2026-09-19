@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { ChapterItem } from '@/sources/types';
-import { X, Search, ArrowUpDown, Bookmark } from 'lucide-react';
+import { X, Search, ArrowUpDown, Bookmark, CheckCircle2 } from 'lucide-react';
 
 interface ChapterDrawerProps {
   isOpen: boolean;
@@ -12,6 +12,7 @@ interface ChapterDrawerProps {
   bookId: string;
   sourceId: string;
   currentChapterId: string;
+  cachedChapterIds?: Set<string> | string[];
   onSelectChapter?: (chapterId: string) => void;
 }
 
@@ -22,14 +23,49 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
   bookId,
   sourceId,
   currentChapterId,
+  cachedChapterIds,
   onSelectChapter,
 }) => {
   const [search, setSearch] = useState('');
   const [isReverse, setIsReverse] = useState(false);
+  const [cachedSet, setCachedSet] = useState<Set<string>>(() => new Set(cachedChapterIds || []));
+  const [showOnlyCached, setShowOnlyCached] = useState(false);
   const currentItemRef = useRef<HTMLAnchorElement | null>(null);
+
+  // Sync prop changes into local cachedSet
+  useEffect(() => {
+    if (cachedChapterIds) {
+      setCachedSet((prev) => {
+        const next = new Set(prev);
+        cachedChapterIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  }, [cachedChapterIds]);
+
+  // Sync server cache when drawer opens
+  useEffect(() => {
+    if (isOpen && bookId) {
+      fetch(`/api/chapter/cache?bookId=${bookId}&source=${sourceId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.data)) {
+            setCachedSet((prev) => {
+              const next = new Set(prev);
+              data.data.forEach((id: string) => next.add(id));
+              return next;
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, bookId, sourceId]);
 
   const displayedChapters = useMemo(() => {
     let list = [...chapters];
+    if (showOnlyCached) {
+      list = list.filter((c) => cachedSet.has(c.id));
+    }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter((c) => c.title.toLowerCase().includes(q) || String(c.index).includes(q));
@@ -38,7 +74,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
       list.reverse();
     }
     return list;
-  }, [chapters, search, isReverse]);
+  }, [chapters, search, isReverse, showOnlyCached, cachedSet]);
 
   // Auto-scroll current chapter to center when drawer is opened
   useEffect(() => {
@@ -69,10 +105,26 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
             <h3 className="font-bold text-zinc-950 text-sm flex items-center gap-2">
               <Bookmark className="w-4 h-4 text-black" />
               目录列表
-              <span className="text-xs font-mono font-normal text-zinc-400">（共 {chapters.length} 章）</span>
+              <span className="text-xs font-mono font-normal text-zinc-400">
+                （共 {chapters.length} 章{cachedSet.size > 0 ? ` · 已缓存 ${cachedSet.size} 章` : ''}）
+              </span>
             </h3>
           </div>
           <div className="flex items-center gap-2">
+            {cachedSet.size > 0 && (
+              <button
+                onClick={() => setShowOnlyCached(!showOnlyCached)}
+                className={`px-2 py-1 text-xs border rounded-md flex items-center gap-1 transition-colors font-mono ${
+                  showOnlyCached
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                    : 'text-zinc-600 bg-white hover:bg-zinc-100 border-zinc-200'
+                }`}
+                title={showOnlyCached ? '显示全部章节' : '只看已缓存章节'}
+              >
+                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                <span>已缓存 ({cachedSet.size})</span>
+              </button>
+            )}
             <button
               onClick={() => setIsReverse(!isReverse)}
               className="px-2.5 py-1 text-xs text-zinc-700 bg-white hover:bg-zinc-100 border border-zinc-200 rounded-md flex items-center gap-1 transition-colors font-mono"
@@ -111,6 +163,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
           ) : (
             displayedChapters.map((c) => {
               const isCurrent = String(c.id) === String(currentChapterId);
+              const isCached = cachedSet.has(c.id);
               return (
                 <Link
                   key={c.id}
@@ -131,11 +184,18 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
                   }`}
                 >
                   <span className="line-clamp-1 flex-1 pr-2">{c.title}</span>
-                  {isCurrent && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-800 text-white font-mono font-normal flex-shrink-0">
-                      当前
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {isCached && (
+                      <span title="已缓存" className="text-emerald-600 flex items-center">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      </span>
+                    )}
+                    {isCurrent && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-800 text-white font-mono font-normal flex-shrink-0">
+                        当前
+                      </span>
+                    )}
+                  </div>
                 </Link>
               );
             })

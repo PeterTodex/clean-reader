@@ -19,6 +19,7 @@ import {
   Layers,
   Clock,
   Download,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function BookDetailPage() {
@@ -37,6 +38,20 @@ export default function BookDetailPage() {
   const [isReverse, setIsReverse] = useState(false);
   const [lastReadChapterId, setLastReadChapterId] = useState<string | null>(null);
   const [showDownloader, setShowDownloader] = useState(false);
+  const [cachedChapterIds, setCachedChapterIds] = useState<Set<string>>(new Set());
+  const [showOnlyCached, setShowOnlyCached] = useState(false);
+
+  const refreshCachedChapters = () => {
+    if (!bookId) return;
+    fetch(`/api/chapter/cache?bookId=${bookId}&source=${sourceId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setCachedChapterIds(new Set(data.data));
+        }
+      })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     if (!bookId) return;
@@ -56,6 +71,9 @@ export default function BookDetailPage() {
       .then((data) => {
         if (data.success && data.data) {
           setBook(data.data);
+          if (Array.isArray(data.data.cachedChapterIds)) {
+            setCachedChapterIds(new Set(data.data.cachedChapterIds));
+          }
         } else {
           setError(data.error || '获取书籍信息失败');
         }
@@ -89,6 +107,9 @@ export default function BookDetailPage() {
   const filteredChapters = useMemo(() => {
     if (!book) return [];
     let list = [...book.chapters];
+    if (showOnlyCached) {
+      list = list.filter((c) => cachedChapterIds.has(c.id));
+    }
     if (chapterSearch.trim()) {
       const q = chapterSearch.trim().toLowerCase();
       list = list.filter((c) => c.title.toLowerCase().includes(q) || String(c.index).includes(q));
@@ -97,7 +118,7 @@ export default function BookDetailPage() {
       list.reverse();
     }
     return list;
-  }, [book, chapterSearch, isReverse]);
+  }, [book, chapterSearch, isReverse, showOnlyCached, cachedChapterIds]);
 
   const startChapterId = lastReadChapterId || (book?.chapters[0]?.id ?? '');
 
@@ -240,7 +261,7 @@ export default function BookDetailPage() {
                     <Bookmark className="w-4 h-4 text-black" />
                     正文章节目录
                     <span className="text-xs font-mono font-normal text-zinc-400">
-                      （共 {book.chapters.length} 章）
+                      （共 {book.chapters.length} 章{cachedChapterIds.size > 0 ? ` · 已缓存 ${cachedChapterIds.size} 章` : ''}）
                     </span>
                   </h2>
                 </div>
@@ -257,6 +278,21 @@ export default function BookDetailPage() {
                     />
                   </div>
 
+                  {cachedChapterIds.size > 0 && (
+                    <button
+                      onClick={() => setShowOnlyCached(!showOnlyCached)}
+                      className={`px-2.5 py-1.5 text-xs rounded-lg flex items-center gap-1.5 transition-colors flex-shrink-0 border font-mono ${
+                        showOnlyCached
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                          : 'text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border-zinc-200'
+                      }`}
+                      title={showOnlyCached ? '显示全部章节' : '只看已缓存章节'}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>已缓存 ({cachedChapterIds.size})</span>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => setIsReverse(!isReverse)}
                     className="px-3 py-1.5 text-xs text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg flex items-center gap-1 transition-colors flex-shrink-0 border border-zinc-200 font-mono"
@@ -271,6 +307,7 @@ export default function BookDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-[600px] overflow-y-auto pr-1">
                 {filteredChapters.map((ch) => {
                   const isLastRead = ch.id === lastReadChapterId;
+                  const isCached = cachedChapterIds.has(ch.id);
                   return (
                     <Link
                       key={ch.id}
@@ -282,11 +319,18 @@ export default function BookDetailPage() {
                       }`}
                     >
                       <span className="line-clamp-1 flex-1 pr-2">{ch.title}</span>
-                      {isLastRead && (
-                        <span className="text-[10px] bg-black text-white px-1.5 py-0.5 rounded font-mono font-normal flex-shrink-0">
-                          最近
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {isCached && (
+                          <span title="已缓存" className="text-emerald-600 flex items-center">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </span>
+                        )}
+                        {isLastRead && (
+                          <span className="text-[10px] bg-black text-white px-1.5 py-0.5 rounded font-mono font-normal flex-shrink-0">
+                            最近
+                          </span>
+                        )}
+                      </div>
                     </Link>
                   );
                 })}
@@ -295,7 +339,10 @@ export default function BookDetailPage() {
 
             <BookDownloaderModal
               isOpen={showDownloader}
-              onClose={() => setShowDownloader(false)}
+              onClose={() => {
+                setShowDownloader(false);
+                refreshCachedChapters();
+              }}
               book={book}
               sourceId={sourceId}
             />

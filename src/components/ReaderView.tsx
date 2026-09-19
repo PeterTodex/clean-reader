@@ -29,6 +29,7 @@ interface ReaderViewProps {
   bookCover?: string;
   bookAuthor?: string;
   sourceId: string;
+  initialCachedChapterIds?: string[];
 }
 
 export const ReaderView: React.FC<ReaderViewProps> = ({
@@ -38,6 +39,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   bookCover = '',
   bookAuthor = '',
   sourceId,
+  initialCachedChapterIds,
 }) => {
   const router = useRouter();
   const [chaptersList, setChaptersList] = useState<ChapterContent[]>([initialChapter]);
@@ -53,6 +55,21 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
+  const [cachedChapterIds, setCachedChapterIds] = useState<Set<string>>(() => {
+    const set = new Set<string>(initialCachedChapterIds || []);
+    if (initialChapter?.id) set.add(initialChapter.id);
+    return set;
+  });
+
+  useEffect(() => {
+    if (initialCachedChapterIds && initialCachedChapterIds.length > 0) {
+      setCachedChapterIds((prev) => {
+        const next = new Set(prev);
+        initialCachedChapterIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  }, [initialCachedChapterIds]);
 
   // In-memory cache for chapters to make transitions instant
   const chapterCacheRef = useRef<Map<string, ChapterContent>>(new Map());
@@ -95,6 +112,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     setChaptersList([initialChapter]);
     setActiveChapterIndex(0);
     chapterCacheRef.current.set(initialChapter.id, initialChapter);
+    setCachedChapterIds((prev) => new Set(prev).add(initialChapter.id));
   }, [initialChapter.id]);
 
   // Sync settings
@@ -131,6 +149,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         const data = await res.json();
         if (data.success && data.data) {
           chapterCacheRef.current.set(nextId, data.data);
+          setCachedChapterIds((prev) => new Set(prev).add(nextId));
         }
       } catch (e) {
         // Silently fail prefetch
@@ -168,6 +187,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       const data = await res.json();
       if (data.success && data.data) {
         chapterCacheRef.current.set(nextId, data.data);
+        setCachedChapterIds((prev) => new Set(prev).add(nextId));
         setChaptersList((prev) => [...prev, data.data]);
       }
     } catch {
@@ -216,6 +236,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         const data = await res.json();
         if (data.success && data.data) {
           chapterCacheRef.current.set(targetChapterId, data.data);
+          setCachedChapterIds((prev) => new Set(prev).add(targetChapterId));
           setChaptersList([data.data]);
           setActiveChapterIndex(0);
           window.scrollTo({ top: 0, behavior: 'instant' });
@@ -601,6 +622,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         bookId={chapter.bookId}
         sourceId={sourceId}
         currentChapterId={chapter.id}
+        cachedChapterIds={cachedChapterIds}
         onSelectChapter={(targetId) => {
           setShowDrawer(false);
           navigateToChapter(targetId);

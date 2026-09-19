@@ -379,6 +379,46 @@ export async function fetchChapterWithCache(
   }
 }
 
+/**
+ * Retrieve all cached chapter IDs for a given book and source.
+ * Only returns valid, unexpired chapters matching the current SCHEMA_VERSION.
+ */
+export function getCachedChapterIds(sourceId: string, bookId: string): string[] {
+  try {
+    const db = openDb();
+    if (!db) return [];
+    const now = Date.now();
+    const rows = db
+      .prepare(
+        'SELECT chapter_id FROM chapters WHERE source_id = ? AND book_id = ? AND schema_version = ? AND (? - cached_at <= ?)'
+      )
+      .all(sourceId, bookId, SCHEMA_VERSION, now, TTL_MS) as { chapter_id: string }[];
+    return rows.map((r) => r.chapter_id);
+  } catch (err: any) {
+    console.warn('[chapter-cache] getCachedChapterIds failed:', err?.message || err);
+    return [];
+  }
+}
+
+/**
+ * Check if a specific chapter is cached in the database.
+ */
+export function isChapterCached(sourceId: string, bookId: string, chapterId: string): boolean {
+  try {
+    const db = openDb();
+    if (!db) return false;
+    const now = Date.now();
+    const row = db
+      .prepare(
+        'SELECT 1 FROM chapters WHERE key = ? AND schema_version = ? AND (? - cached_at <= ?)'
+      )
+      .get(chapterCacheKey(sourceId, bookId, chapterId), SCHEMA_VERSION, now, TTL_MS);
+    return !!row;
+  } catch {
+    return false;
+  }
+}
+
 export interface ChapterCacheStats {
   entries: number;
   dbPath: string;

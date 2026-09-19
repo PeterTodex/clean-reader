@@ -137,6 +137,7 @@ export default function ReaderPage() {
       bookCover={book?.cover}
       bookAuthor={book?.author}
       sourceId={sourceId}
+      initialCachedChapterIds={book?.cachedChapterIds}
     />
   );
 }

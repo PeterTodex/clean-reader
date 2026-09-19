@@ -28,6 +28,7 @@ export interface BookDetail {
   intro: string;
   chapters: ChapterItem[];
   sourceId: string;
+  cachedChapterIds?: string[];
 }
 
 export interface ChapterContent {
