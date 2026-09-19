@@ -6,15 +6,26 @@ import { BookOpen, Library, Settings, Search } from 'lucide-react';
 import { storage } from '@/lib/storage';
 
 interface HeaderProps {
+  onSearchClick?: () => void;
   onSearchFocus?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onSearchFocus }) => {
+export const Header: React.FC<HeaderProps> = ({ onSearchClick, onSearchFocus }) => {
   const [shelfCount, setShelfCount] = useState<number>(0);
 
   useEffect(() => {
     setShelfCount(storage.getBookshelf().length);
   }, []);
+
+  const handleSearchAction = () => {
+    if (onSearchClick) {
+      onSearchClick();
+    } else if (onSearchFocus) {
+      onSearchFocus();
+    } else {
+      window.location.href = '/?search=1';
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-zinc-200/80 transition-colors">
@@ -29,16 +40,14 @@ export const Header: React.FC<HeaderProps> = ({ onSearchFocus }) => {
 
         {/* Action Buttons */}
         <nav className="flex items-center gap-1.5 sm:gap-2">
-          {onSearchFocus && (
-            <button
-              onClick={onSearchFocus}
-              className="p-2 sm:px-3 sm:py-1.5 text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 rounded-lg flex items-center gap-1.5 transition-colors text-sm font-medium"
-              title="搜索小说"
-            >
-              <Search className="w-4 h-4" />
-              <span className="hidden sm:inline">搜书</span>
-            </button>
-          )}
+          <button
+            onClick={handleSearchAction}
+            className="p-2 sm:px-3 sm:py-1.5 text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 rounded-lg flex items-center gap-1.5 transition-colors text-sm font-medium"
+            title="搜索小说"
+          >
+            <Search className="w-4 h-4" />
+            <span className="hidden sm:inline">搜书</span>
+          </button>
 
           <Link
             href="/bookshelf"
