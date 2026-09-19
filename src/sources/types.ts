@@ -51,9 +51,46 @@ export interface SourceMeta {
   publishUrl?: string; // e.g. address publish page
 }
 
+export interface HomeBookItem {
+  id: string;
+  title: string;
+  author?: string;
+  cover?: string;
+  intro?: string;
+  category?: string;
+  status?: string;
+  wordCount?: string;
+  latestChapter?: string;
+  updateTime?: string;
+  tags?: string[];
+  rank?: number;
+}
+
+export interface HomeTab {
+  key: string;
+  label: string;
+  items: HomeBookItem[];
+}
+
+export interface HomeColumn {
+  title: string;
+  items: HomeBookItem[];
+}
+
+export interface HomeSection {
+  id: string;
+  title: string;
+  type: 'banner' | 'grid' | 'ranking' | 'list' | 'tabs';
+  moreUrl?: string;
+  items?: HomeBookItem[];
+  tabs?: HomeTab[];
+  columns?: HomeColumn[];
+}
+
 export interface BookSource {
   meta: SourceMeta;
   search(keyword: string): Promise<SearchResult[]>;
   getDetail(bookId: string): Promise<BookDetail>;
   getChapter(bookId: string, chapterId: string): Promise<ChapterContent>;
+  getHome?(): Promise<HomeSection[]>;
 }

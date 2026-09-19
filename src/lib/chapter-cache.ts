@@ -1,6 +1,6 @@
 import { mkdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { ChapterContent, BookDetail } from '@/sources/types';
+import { ChapterContent, BookDetail, HomeSection } from '@/sources/types';
 
 /**
  * Server-side relay cache for chapter bodies.
@@ -161,6 +161,12 @@ function openDb(): DatabaseSync | null {
         last_access    INTEGER NOT NULL
       );
       CREATE INDEX IF NOT EXISTS idx_books_key ON books(key);
+
+      CREATE TABLE IF NOT EXISTS home (
+        source_id      TEXT PRIMARY KEY,
+        payload        TEXT NOT NULL,
+        cached_at      INTEGER NOT NULL
+      );
     `);
 
     console.log(`[chapter-cache] Opened ${DB_PATH}`);
@@ -532,5 +538,100 @@ export async function fetchBookWithCache(
     return { detail, cached: false };
   } finally {
     inFlightBooks.delete(key);
+  }
+}
+
+const HOME_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const inFlightHome = new Map<string, Promise<HomeSection[]>>();
+
+export function readCachedHome(sourceId: string): HomeSection[] | null {
+  try {
+    const db = openDb();
+    if (!db) return null;
+
+    const row = db.prepare('SELECT payload, cached_at FROM home WHERE source_id = ?').get(sourceId) as
+      | { payload: string; cached_at: number }
+      | undefined;
+    if (!row) return null;
+
+    if (Date.now() - row.cached_at > HOME_CACHE_TTL_MS) {
+      return null;
+    }
+
+    const parsed = JSON.parse(row.payload);
+    if (!Array.isArray(parsed)) return null;
+    return parsed;
+  } catch (err: any) {
+    console.warn('[chapter-cache] Read home failed:', err?.message || err);
+    return null;
+  }
+}
+
+export function writeCachedHome(sourceId: string, sections: HomeSection[]): void {
+  if (!Array.isArray(sections) || sections.length === 0) return;
+  try {
+    const db = openDb();
+    if (!db) return;
+
+    const payload = JSON.stringify(sections);
+    const now = Date.now();
+    db.prepare(`
+      INSERT INTO home (source_id, payload, cached_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(source_id) DO UPDATE SET
+        payload = excluded.payload,
+        cached_at = excluded.cached_at
+    `).run(sourceId, payload, now);
+  } catch (err: any) {
+    console.warn('[chapter-cache] Write home failed:', err?.message || err);
+  }
+}
+
+export async function fetchHomeWithCache(
+  sourceId: string,
+  fetcher: () => Promise<HomeSection[]>,
+  forceRefresh = false
+): Promise<{ sections: HomeSection[]; cached: boolean }> {
+  if (!forceRefresh) {
+    const cached = readCachedHome(sourceId);
+    if (cached) return { sections: cached, cached: true };
+  }
+
+  const pending = inFlightHome.get(sourceId);
+  if (pending) {
+    const sections = await pending;
+    return { sections, cached: false };
+  }
+
+  const promise = fetcher();
+  inFlightHome.set(sourceId, promise);
+  try {
+    const sections = await promise;
+    if (Array.isArray(sections) && sections.length > 0) {
+      writeCachedHome(sourceId, sections);
+    }
+    return { sections, cached: false };
+  } catch (err: any) {
+    // If upstream fetch fails, try to fallback to stale cache if present
+    try {
+      const db = openDb();
+      if (db) {
+        const row = db.prepare('SELECT payload FROM home WHERE source_id = ?').get(sourceId) as
+          | { payload: string }
+          | undefined;
+        if (row?.payload) {
+          const parsed = JSON.parse(row.payload);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            console.warn(`[chapter-cache] Serving stale home cache for ${sourceId} after fetch error`);
+            return { sections: parsed, cached: true };
+          }
+        }
+      }
+    } catch {
+      // Ignore
+    }
+    throw err;
+  } finally {
+    inFlightHome.delete(sourceId);
   }
 }

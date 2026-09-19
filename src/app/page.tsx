@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { Bookshelf } from '@/components/Bookshelf';
 import { BookCoverPlaceholder } from '@/components/BookCoverPlaceholder';
-import { SearchResult, SourceMeta } from '@/sources/types';
+import { SearchResult, SourceMeta, HomeSection } from '@/sources/types';
 import { BookshelfItem, storage } from '@/lib/storage';
+import { HomeFeed } from '@/components/HomeFeed';
 import {
   Search,
   BookOpen,
@@ -26,6 +27,8 @@ export default function HomePage() {
   const [sources, setSources] = useState<SourceMeta[]>([]);
   const [selectedSource, setSelectedSource] = useState<string>('');
   const [bookshelfItems, setBookshelfItems] = useState<BookshelfItem[]>([]);
+  const [homeSections, setHomeSections] = useState<HomeSection[]>([]);
+  const [isLoadingHome, setIsLoadingHome] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Load bookshelf and sources on mount
@@ -44,6 +47,26 @@ export default function HomePage() {
       })
       .catch((e) => console.error('Failed to load sources:', e));
   }, []);
+
+  // Fetch home feed when selectedSource changes
+  useEffect(() => {
+    if (!selectedSource) return;
+    setIsLoadingHome(true);
+    fetch(`/api/home?source=${selectedSource}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setHomeSections(data.data);
+        } else {
+          setHomeSections([]);
+        }
+      })
+      .catch((e) => {
+        console.warn('Failed to load home feed:', e);
+        setHomeSections([]);
+      })
+      .finally(() => setIsLoadingHome(false));
+  }, [selectedSource]);
 
   const handleRefreshShelf = () => {
     setBookshelfItems(storage.getBookshelf());
@@ -120,11 +143,11 @@ export default function HomePage() {
 
               {/* Source Selector */}
               {sources.length > 0 && (
-                <div className="hidden sm:flex items-center pr-2 border-r border-zinc-200 mr-2">
+                <div className="flex items-center pr-2 border-r border-zinc-200 mr-2 shrink-0">
                   <select
                     value={selectedSource}
                     onChange={(e) => setSelectedSource(e.target.value)}
-                    className="text-xs bg-zinc-100 text-zinc-800 py-1.5 px-2 rounded-lg border-none focus:ring-1 focus:ring-black cursor-pointer font-medium"
+                    className="text-xs bg-zinc-100 text-zinc-800 py-1.5 px-2 rounded-lg border-none focus:ring-1 focus:ring-black cursor-pointer font-medium max-w-[85px] sm:max-w-none truncate"
                   >
                     {sources.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -256,6 +279,44 @@ export default function HomePage() {
             onOpenSearch={focusSearch}
           />
         </section>
+
+        {/* Source Switcher & Home Feed */}
+        {(homeSections.length > 0 || isLoadingHome || sources.length > 1) && (
+          <section className="space-y-6">
+            {sources.length > 1 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-500 font-mono">书源广场：</span>
+                  <div className="flex items-center gap-1.5 overflow-x-auto">
+                    {sources.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => setSelectedSource(s.id)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                          selectedSource === s.id
+                            ? 'bg-black text-white shadow-xs'
+                            : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                        }`}
+                      >
+                        {s.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
+                  随书源切换展示不同主页
+                </span>
+              </div>
+            )}
+
+            <HomeFeed
+              sections={homeSections}
+              sourceId={selectedSource}
+              loading={isLoadingHome}
+            />
+          </section>
+        )}
       </main>
 
       {/* Footer */}

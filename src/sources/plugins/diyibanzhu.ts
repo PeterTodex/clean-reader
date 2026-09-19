@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import { BookSource, SourceMeta, SearchResult, BookDetail, ChapterItem, ChapterContent } from '../types';
+import { BookSource, SourceMeta, SearchResult, BookDetail, ChapterItem, ChapterContent, HomeSection, HomeBookItem } from '../types';
 import { fetchHtml, buildProxiedImageUrl } from '@/lib/request';
 
 // Known sensitive character map used by the source site
@@ -334,6 +334,175 @@ export class DiyibanzhuSource implements BookSource {
     // Clean whitespace
     text = text.replace(/^&nbsp;|\u3000/g, '').trim();
     return text;
+  }
+
+  public async getHome(): Promise<HomeSection[]> {
+    const baseUrl = this.getBaseUrl();
+    try {
+      const html = await fetchHtml(baseUrl, {
+        headers: { Referer: baseUrl },
+        timeout: 10000,
+      });
+      const $ = cheerio.load(html);
+      const sections: HomeSection[] = [];
+      const rankDivs = $('.rank');
+
+      // 1. 热门推荐
+      if (rankDivs.length > 0) {
+        const hotDiv = rankDivs.eq(0);
+        const hotBooks: HomeBookItem[] = [];
+        hotDiv.find('dl').each((_, dl) => {
+          const dt = $(dl).find('dt a');
+          const href = dt.attr('href') || '';
+          const idMatch = href.match(/(\d+)\.html/);
+          if (!idMatch) return;
+          const id = idMatch[1];
+          const title = dt.text().trim();
+          const intro = $(dl).find('dd').text().trim();
+          const coverImg = $(dl).find('a.cover img, img');
+          let cover = coverImg.attr('data-original') || coverImg.attr('src') || '';
+          if (cover && !cover.startsWith('http')) cover = `${baseUrl}${cover}`;
+          hotBooks.push({
+            id,
+            title,
+            intro,
+            cover: buildProxiedImageUrl(cover, baseUrl),
+          });
+        });
+        if (hotBooks.length > 0) {
+          sections.push({
+            id: 'hot',
+            title: '热门推荐',
+            type: 'grid',
+            items: hotBooks,
+          });
+        }
+      }
+
+      // 2. 排行榜: 本周人气榜 & 书友收藏榜
+      const columns: { title: string; items: HomeBookItem[] }[] = [];
+      const parseRankCol = (div: cheerio.Cheerio<any>, colTitle: string) => {
+        const items: HomeBookItem[] = [];
+        div.find('dl').first().each((_, dl) => {
+          const dt = $(dl).find('dt a');
+          const href = dt.attr('href') || '';
+          const idMatch = href.match(/(\d+)\.html/);
+          if (idMatch) {
+            const title = dt.text().trim();
+            const intro = $(dl).find('dd').text().trim();
+            items.push({
+              id: idMatch[1],
+              title,
+              intro: intro.slice(0, 50),
+              rank: 1,
+            });
+          }
+        });
+        div.find('li').each((_, li) => {
+          const a = $(li).find('a').first();
+          const href = a.attr('href') || '';
+          const idMatch = href.match(/(\d+)\.html/);
+          if (idMatch) {
+            const title = a.text().trim();
+            const author = $(li).find('a[href*="/author/"]').text().trim();
+            items.push({
+              id: idMatch[1],
+              title,
+              author,
+              rank: items.length + 1,
+            });
+          }
+        });
+        if (items.length > 0) {
+          columns.push({ title: colTitle, items });
+        }
+      };
+
+      if (rankDivs.length > 1) parseRankCol(rankDivs.eq(1), '本周人气榜');
+      if (rankDivs.length > 2) parseRankCol(rankDivs.eq(2), '书友收藏榜');
+
+      if (columns.length > 0) {
+        sections.push({
+          id: 'rankings',
+          title: '排行榜',
+          type: 'ranking',
+          columns,
+        });
+      }
+
+      // 3. 最新小说
+      if (rankDivs.length > 3) {
+        const newDiv = rankDivs.eq(3);
+        const newBooks: HomeBookItem[] = [];
+        newDiv.find('dl').each((_, dl) => {
+          const dt = $(dl).find('dt a');
+          const href = dt.attr('href') || '';
+          const idMatch = href.match(/(\d+)\.html/);
+          if (idMatch) {
+            newBooks.push({
+              id: idMatch[1],
+              title: dt.text().trim(),
+              intro: $(dl).find('dd').text().trim(),
+            });
+          }
+        });
+        newDiv.find('li').each((_, li) => {
+          const a = $(li).find('a').first();
+          const href = a.attr('href') || '';
+          const idMatch = href.match(/(\d+)\.html/);
+          if (idMatch) {
+            const title = a.text().trim();
+            const author = $(li).find('a[href*="/author/"]').text().trim();
+            newBooks.push({
+              id: idMatch[1],
+              title,
+              author,
+            });
+          }
+        });
+        if (newBooks.length > 0) {
+          sections.push({
+            id: 'new',
+            title: '最新小说',
+            type: 'grid',
+            items: newBooks.slice(0, 10),
+          });
+        }
+      }
+
+      // 4. 最近更新
+      if (rankDivs.length > 4) {
+        const updateDiv = rankDivs.eq(4);
+        const updates: HomeBookItem[] = [];
+        updateDiv.find('dl').each((_, dl) => {
+          const dt = $(dl).find('dt a');
+          const href = dt.attr('href') || '';
+          const idMatch = href.match(/(\d+)\.html/);
+          if (idMatch) {
+            const title = dt.text().trim();
+            const info = $(dl).find('dd').text().trim().replace(title, '').trim();
+            updates.push({
+              id: idMatch[1],
+              title,
+              status: info,
+            });
+          }
+        });
+        if (updates.length > 0) {
+          sections.push({
+            id: 'updates',
+            title: '最近更新',
+            type: 'list',
+            items: updates.slice(0, 15),
+          });
+        }
+      }
+
+      return sections;
+    } catch (err: any) {
+      console.error(`[diyibanzhu] getHome failed:`, err.message);
+      return [];
+    }
   }
 }
 

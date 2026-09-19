@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import { BookSource, SourceMeta, SearchResult, BookDetail, ChapterItem, ChapterContent } from '../types';
+import { BookSource, SourceMeta, SearchResult, BookDetail, ChapterItem, ChapterContent, HomeSection, HomeBookItem } from '../types';
 import { fetchHtml } from '@/lib/request';
 
 /**
@@ -276,6 +276,198 @@ export class BanshanrenSource implements BookSource {
     } catch (err: any) {
       console.error(`[banshanren] getChapter failed for ${bookId}/${chapterId}:`, err.message);
       throw new Error(`获取章节失败: ${err.message}`);
+    }
+  }
+
+  public async getHome(): Promise<HomeSection[]> {
+    const baseUrl = this.getBaseUrl();
+    try {
+      const html = await fetchHtml(baseUrl, {
+        headers: { Referer: baseUrl },
+        timeout: DEFAULT_TIMEOUT,
+      });
+      const $ = cheerio.load(html);
+      const sections: HomeSection[] = [];
+
+      // 1. 热门小说 (Grid)
+      const hotBooks: HomeBookItem[] = [];
+      $('.main_box > div').each((_, el) => {
+        const caption = $(el).find('.caption_box span').text().trim();
+        if (caption === '热门小说') {
+          $(el).find('li.novel_li').each((_, li) => {
+            const a = $(li).find('a.cover_box');
+            const href = a.attr('href') || '';
+            const idMatch = href.match(/\/novel\/([^/]+)/);
+            if (!idMatch) return;
+            const id = idMatch[1];
+            const title = a.attr('title') || $(li).find('p').text().trim();
+            hotBooks.push({
+              id,
+              title,
+              cover: '',
+            });
+          });
+        }
+      });
+      if (hotBooks.length > 0) {
+        sections.push({
+          id: 'hot',
+          title: '热门小说',
+          type: 'grid',
+          items: hotBooks,
+        });
+      }
+
+      // 2. 新书上架 (Grid)
+      const newBooks: HomeBookItem[] = [];
+      $('.main_box > div').each((_, el) => {
+        const caption = $(el).find('.caption_box span').text().trim();
+        if (caption === '新书上架') {
+          $(el).find('li.novel_li').each((_, li) => {
+            const a = $(li).find('a.cover_box');
+            const href = a.attr('href') || '';
+            const idMatch = href.match(/\/novel\/([^/]+)/);
+            if (!idMatch) return;
+            const id = idMatch[1];
+            const title = a.attr('title') || $(li).find('p').text().trim();
+            newBooks.push({
+              id,
+              title,
+              cover: '',
+            });
+          });
+        }
+      });
+      if (newBooks.length > 0) {
+        sections.push({
+          id: 'new',
+          title: '新书上架',
+          type: 'grid',
+          items: newBooks,
+        });
+      }
+
+      // 3. 排行榜 (3 columns: 新作榜, 收藏榜, 热评榜)
+      const columns: { title: string; items: HomeBookItem[] }[] = [];
+      $('.top_box .top_list_box > ul').each((_, ul) => {
+        const colTitle = $(ul).find('.top_title').text().trim();
+        const items: HomeBookItem[] = [];
+        $(ul).find('li.novel_li').each((idx, li) => {
+          const a = $(li).find('a.cover_box');
+          const href = a.attr('href') || '';
+          const idMatch = href.match(/\/novel\/([^/]+)/);
+          if (!idMatch) return;
+          const id = idMatch[1];
+          const title = a.attr('title') || '';
+          const infoBox = $(li).find('.info_box');
+          const author = infoBox.eq(0).text().trim();
+          const statusText = infoBox.eq(1).text().trim().replace(/\s+/g, ' ');
+          items.push({
+            id,
+            title,
+            author,
+            status: statusText,
+            rank: idx + 1,
+            cover: '',
+          });
+        });
+        if (colTitle && items.length > 0) {
+          columns.push({ title: colTitle, items });
+        }
+      });
+      if (columns.length > 0) {
+        sections.push({
+          id: 'rankings',
+          title: '排行榜',
+          type: 'ranking',
+          columns,
+        });
+      }
+
+      // 4. 热门类型 (Tabs: 奇幻玄幻, BG言情, BL耽美, GL百合, 现代都市, 穿越重生, 武侠仙侠)
+      const categoryTabs: { key: string; label: string; items: HomeBookItem[] }[] = [];
+      $('.main_box > div').each((_, el) => {
+        const caption = $(el).find('.caption_box span').text().trim();
+        if (caption === '热门类型') {
+          const tabLabels: string[] = [];
+          $(el).find('ul.category_tab li').each((_, li) => {
+            tabLabels.push($(li).text().trim());
+          });
+
+          $(el).find('ul.category_tab_list').each((idx, ul) => {
+            const label = tabLabels[idx] || `分类 ${idx + 1}`;
+            const items: HomeBookItem[] = [];
+            $(ul).find('li.novel_li').each((_, li) => {
+              const a = $(li).find('a.cover_box');
+              const href = a.attr('href') || '';
+              const idMatch = href.match(/\/novel\/([^/]+)/);
+              if (!idMatch) return;
+              const id = idMatch[1];
+              const title = a.attr('title') || $(li).find('p').text().trim();
+              items.push({
+                id,
+                title,
+                cover: '',
+              });
+            });
+            if (items.length > 0) {
+              categoryTabs.push({
+                key: `cat-${idx}`,
+                label,
+                items,
+              });
+            }
+          });
+        }
+      });
+      if (categoryTabs.length > 0) {
+        sections.push({
+          id: 'categories',
+          title: '热门类型',
+          type: 'tabs',
+          tabs: categoryTabs,
+        });
+      }
+
+      // 5. 最新更新 (List)
+      const updates: HomeBookItem[] = [];
+      $('.main_box > div').each((_, el) => {
+        const caption = $(el).find('.caption_box span').text().trim();
+        if (caption === '最新更新') {
+          $(el).find('li.novel_li').each((_, li) => {
+            const a = $(li).find('a.cover_box');
+            const href = a.attr('href') || '';
+            const idMatch = href.match(/\/novel\/([^/]+)/);
+            if (!idMatch) return;
+            const id = idMatch[1];
+            const title = a.attr('title') || $(li).find('a.title').text().trim();
+            const author = $(li).find('.author, .info_box').first().text().trim();
+            const latestChapter = $(li).find('.last_chapter, a.chapter').text().trim();
+            const updateTime = $(li).find('.time, .update_time').text().trim();
+            updates.push({
+              id,
+              title,
+              author,
+              latestChapter,
+              updateTime,
+              cover: '',
+            });
+          });
+        }
+      });
+      if (updates.length > 0) {
+        sections.push({
+          id: 'updates',
+          title: '最新更新',
+          type: 'list',
+          items: updates.slice(0, 20),
+        });
+      }
+
+      return sections;
+    } catch (err: any) {
+      console.error(`[banshanren] getHome failed:`, err.message);
+      return [];
     }
   }
 }
