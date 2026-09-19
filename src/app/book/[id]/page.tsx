@@ -41,12 +41,13 @@ export default function BookDetailPage() {
   useEffect(() => {
     if (!bookId) return;
 
-    // Check shelf status
+    // Check shelf status and reading history
     setInShelf(storage.isInBookshelf(bookId, sourceId));
-    const shelf = storage.getBookshelf();
-    const shelfItem = shelf.find((b) => b.id === bookId && b.sourceId === sourceId);
-    if (shelfItem?.lastChapterId) {
-      setLastReadChapterId(shelfItem.lastChapterId);
+    const shelfItem = storage.getBookshelf().find((b) => b.id === bookId && b.sourceId === sourceId);
+    const historyItem = storage.getHistory().find((h) => h.id === bookId && h.sourceId === sourceId);
+    const lastChapter = shelfItem?.lastChapterId || historyItem?.lastChapterId;
+    if (lastChapter) {
+      setLastReadChapterId(lastChapter);
     }
 
     setLoading(true);
@@ -69,14 +70,16 @@ export default function BookDetailPage() {
       storage.removeFromBookshelf(book.id, sourceId);
       setInShelf(false);
     } else {
+      const historyItem = storage.getHistory().find((h) => h.id === book.id && h.sourceId === sourceId);
       storage.saveToBookshelf({
         id: book.id,
         title: book.title,
         author: book.author,
         cover: book.cover,
         sourceId,
-        lastChapterId: book.chapters[0]?.id,
-        lastChapterTitle: book.chapters[0]?.title,
+        lastChapterId: historyItem?.lastChapterId || lastReadChapterId || book.chapters[0]?.id,
+        lastChapterTitle: historyItem?.lastChapterTitle || book.chapters[0]?.title,
+        progressPercent: historyItem?.progressPercent,
         totalChapters: book.chapters.length,
       });
       setInShelf(true);
@@ -109,7 +112,7 @@ export default function BookDetailPage() {
           className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-500 hover:text-black transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          返回书架
+          返回首页
         </Link>
 
         {loading ? (

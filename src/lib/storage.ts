@@ -11,6 +11,19 @@ export interface BookshelfItem {
   totalChapters?: number;
 }
 
+export interface HistoryItem {
+  id: string;
+  title: string;
+  author: string;
+  cover: string;
+  sourceId: string;
+  lastChapterId: string;
+  lastChapterTitle: string;
+  lastReadTime: number;
+  progressPercent?: number;
+  totalChapters?: number;
+}
+
 export interface ReaderSettings {
   theme: 'parchment' | 'eyecare' | 'white' | 'eink' | 'dark' | 'oled';
   fontSize: number;
@@ -43,6 +56,7 @@ export interface BookmarkItem {
 
 const STORAGE_KEYS = {
   BOOKSHELF: 'clean_reader_bookshelf',
+  HISTORY: 'clean_reader_history',
   SETTINGS: 'clean_reader_settings',
   ACTIVE_SOURCE: 'clean_reader_source',
   BOOKMARKS: 'clean_reader_bookmarks',
@@ -113,6 +127,67 @@ export const storage = {
   isInBookshelf(bookId: string, sourceId: string): boolean {
     if (typeof window === 'undefined') return false;
     return storage.getBookshelf().some((b) => b.id === bookId && b.sourceId === sourceId);
+  },
+
+  getHistory(): HistoryItem[] {
+    if (typeof window === 'undefined') return [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.HISTORY);
+      const list: HistoryItem[] = data ? JSON.parse(data) : [];
+      return list.sort((a, b) => b.lastReadTime - a.lastReadTime);
+    } catch {
+      return [];
+    }
+  },
+
+  saveToHistory(item: Omit<HistoryItem, 'lastReadTime'>): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const history = storage.getHistory().filter(
+        (h) => !(h.id === item.id && h.sourceId === item.sourceId)
+      );
+      const newItem: HistoryItem = {
+        ...item,
+        lastReadTime: Date.now(),
+      };
+      history.unshift(newItem);
+      if (history.length > 200) history.length = 200;
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+
+      // If the book is ALREADY on the bookshelf, keep bookshelf reading progress in sync!
+      if (storage.isInBookshelf(item.id, item.sourceId)) {
+        storage.updateReadingProgress(
+          item.id,
+          item.sourceId,
+          item.lastChapterId,
+          item.lastChapterTitle,
+          item.progressPercent
+        );
+      }
+    } catch (e) {
+      console.error('Failed to save reading history:', e);
+    }
+  },
+
+  removeFromHistory(bookId: string, sourceId: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const history = storage.getHistory().filter(
+        (h) => !(h.id === bookId && h.sourceId === sourceId)
+      );
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history));
+    } catch (e) {
+      console.error('Failed to remove from history:', e);
+    }
+  },
+
+  clearHistory(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.removeItem(STORAGE_KEYS.HISTORY);
+    } catch (e) {
+      console.error('Failed to clear history:', e);
+    }
   },
 
   getSettings(): ReaderSettings {

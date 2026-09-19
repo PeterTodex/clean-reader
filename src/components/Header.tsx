@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { BookOpen, Library, Settings, Search } from 'lucide-react';
+import { BookOpen, Library, Settings, Search, Clock } from 'lucide-react';
 import { storage } from '@/lib/storage';
 
 interface HeaderProps {
@@ -48,6 +48,15 @@ export const Header: React.FC<HeaderProps> = ({ onSearchClick, onSearchFocus }) 
             <Search className="w-4 h-4" />
             <span className="hidden sm:inline">搜书</span>
           </button>
+
+          <Link
+            href="/history"
+            className="p-2 sm:px-3 sm:py-1.5 text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 rounded-lg flex items-center gap-1.5 transition-colors text-sm font-medium"
+            title="阅读历史"
+          >
+            <Clock className="w-4 h-4" />
+            <span className="hidden sm:inline">历史</span>
+          </Link>
 
           <Link
             href="/bookshelf"

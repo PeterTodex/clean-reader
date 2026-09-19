@@ -119,11 +119,13 @@ export default function HomePage() {
               我的书架
             </Link>
             <span>·</span>
+            <Link href="/history" className="hover:text-zinc-800 transition-colors">
+              阅读历史
+            </Link>
+            <span>·</span>
             <Link href="/sources" className="hover:text-zinc-800 transition-colors">
               书源引擎
             </Link>
-            <span>·</span>
-            <span>无广告 · 极简黑白</span>
           </div>
         </div>
       </footer>

@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { BookshelfItem, storage } from '@/lib/storage';
-import { BookMarked, Trash2, ArrowRight, BookOpen } from 'lucide-react';
+import { BookMarked, Trash2, ArrowRight, BookOpen, Clock } from 'lucide-react';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
 
 interface BookshelfProps {
@@ -30,15 +30,24 @@ export const Bookshelf: React.FC<BookshelfProps> = ({ items, onRefresh, onOpenSe
         </div>
         <h3 className="text-sm font-bold text-zinc-900 mb-1">书架暂无藏书</h3>
         <p className="text-xs text-zinc-500 mb-5 max-w-sm mx-auto">
-          你可以搜索任意小说阅读，系统会自动为您保存阅读进度并归档至此。
+          你可以在搜书或阅读历史中将喜爱的小说加入书架，方便随时翻阅。
         </p>
-        <button
-          onClick={onOpenSearch}
-          className="px-4 py-2 rounded-lg bg-black text-white hover:bg-zinc-800 transition-colors text-xs font-medium inline-flex items-center gap-2 shadow-sm"
-        >
-          <BookOpen className="w-4 h-4" />
-          立即搜书
-        </button>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={onOpenSearch}
+            className="px-4 py-2 rounded-lg bg-black text-white hover:bg-zinc-800 transition-colors text-xs font-medium inline-flex items-center gap-2 shadow-sm"
+          >
+            <BookOpen className="w-4 h-4" />
+            立即搜书
+          </button>
+          <Link
+            href="/history"
+            className="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 transition-colors text-xs font-medium inline-flex items-center gap-2 border border-zinc-200"
+          >
+            <Clock className="w-4 h-4" />
+            阅读历史
+          </Link>
+        </div>
       </div>
     );
   }

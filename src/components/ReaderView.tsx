@@ -103,10 +103,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     setSettings(updated);
   };
 
-  // Save reading progress to bookshelf
+  // Save reading progress to history (does not auto-add to bookshelf)
   useEffect(() => {
     if (chapter) {
-      storage.saveToBookshelf({
+      storage.saveToHistory({
         id: chapter.bookId,
         title: bookTitle,
         author: bookAuthor,
