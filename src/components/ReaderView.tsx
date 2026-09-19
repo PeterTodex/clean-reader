@@ -404,158 +404,69 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           ))}
         </article>
 
-        {/* Chapter Navigation Buttons */}
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="mt-16 pt-8 border-t reader-border flex items-center justify-between gap-4 cursor-default"
-        >
-          {chapter.prevChapterId ? (
-            <button
-              onClick={() => navigateToChapter(chapter.prevChapterId!)}
-              className="flex-1 py-3 px-4 rounded-xl border reader-border hover:opacity-80 transition-opacity flex items-center justify-center gap-1.5 text-sm font-medium"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              上一章
-            </button>
-          ) : (
-            <div className="flex-1 py-3 px-4 rounded-xl border reader-border opacity-30 text-center text-sm">
-              已是第一章
-            </div>
-          )}
-
-          <button
-            onClick={() => setShowDrawer(true)}
-            className="px-4 py-3 rounded-xl border reader-border hover:opacity-80 transition-opacity text-sm font-medium"
-          >
-            目录
-          </button>
-
-          {chapter.nextChapterId ? (
-            <button
-              onClick={() => navigateToChapter(chapter.nextChapterId!)}
-              className="flex-1 py-3 px-4 rounded-xl bg-black text-white hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 text-sm font-medium shadow-sm"
-            >
-              下一章
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          ) : (
-            <div className="flex-1 py-3 px-4 rounded-xl border reader-border opacity-30 text-center text-sm">
-              已是最新章
-            </div>
-          )}
+        {/* Chapter End Mark */}
+        <div className="mt-16 py-12 text-center text-xs opacity-35 font-mono tracking-widest select-none">
+          —— 本章完 ——
         </div>
       </main>
 
-      {/* Bottom Floating Control Bar with Chapter Navigation */}
+      {/* Bottom Floating Bar */}
       <footer
-        className={`fixed bottom-0 inset-x-0 z-40 backdrop-blur-md border-t reader-border transition-all duration-300 shadow-lg ${
+        className={`fixed bottom-0 inset-x-0 z-40 backdrop-blur-md border-t reader-border transition-all duration-300 shadow-sm ${
           showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
         } ${themeClass}`}
       >
-        {/* Row 1: Chapter quick switcher */}
-        <div className="max-w-4xl mx-auto px-4 pt-2.5 pb-2 flex items-center justify-between gap-3 text-xs border-b reader-border">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-12 flex items-center justify-between text-xs">
+          {/* 上一章（纯文字） */}
           <button
             disabled={!chapter.prevChapterId}
             onClick={(e) => {
               e.stopPropagation();
               if (chapter.prevChapterId) navigateToChapter(chapter.prevChapterId);
             }}
-            className={`px-3 py-1.5 rounded-lg border reader-border flex items-center gap-1 font-medium transition-all ${
+            className={`py-2 px-2 font-medium transition-opacity ${
               chapter.prevChapterId
-                ? 'hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 cursor-pointer'
-                : 'opacity-30 cursor-not-allowed'
+                ? 'hover:opacity-70 active:opacity-50 cursor-pointer'
+                : 'opacity-25 cursor-not-allowed'
             }`}
-            title={chapter.prevChapterId ? '跳转到上一章' : '已是第一章'}
+            title={chapter.prevChapterId ? '上一章' : '已是第一章'}
           >
-            <ChevronLeft className="w-4 h-4" />
-            <span>上一章</span>
+            上一章
           </button>
 
+          {/* 章节名 + 进度数字（点击打开目录列表） */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               setShowDrawer(true);
             }}
-            className="flex-1 min-w-0 text-center px-2 py-1 truncate hover:opacity-75 transition-opacity font-medium"
+            className="flex-1 min-w-0 text-center px-4 py-1 hover:opacity-75 transition-opacity"
             title="点击打开目录列表"
           >
-            <span className="truncate block font-serif">{chapter.title}</span>
+            <span className="font-serif truncate inline-block max-w-[200px] sm:max-w-md align-middle text-xs sm:text-sm font-medium">
+              {chapter.title}
+            </span>
+            <span className="opacity-50 ml-2 text-[11px] font-mono align-middle">
+              {readingProgress}%
+            </span>
           </button>
 
+          {/* 下一章（纯文字） */}
           <button
             disabled={!chapter.nextChapterId}
             onClick={(e) => {
               e.stopPropagation();
               if (chapter.nextChapterId) navigateToChapter(chapter.nextChapterId);
             }}
-            className={`px-3 py-1.5 rounded-lg border reader-border flex items-center gap-1 font-medium transition-all ${
+            className={`py-2 px-2 font-medium transition-opacity ${
               chapter.nextChapterId
-                ? 'hover:bg-black/5 dark:hover:bg-white/10 active:scale-95 cursor-pointer'
-                : 'opacity-30 cursor-not-allowed'
+                ? 'hover:opacity-70 active:opacity-50 cursor-pointer'
+                : 'opacity-25 cursor-not-allowed'
             }`}
-            title={chapter.nextChapterId ? '跳转到下一章' : '已是最新章'}
+            title={chapter.nextChapterId ? '下一章' : '已是最新章'}
           >
-            <span>下一章</span>
-            <ChevronRight className="w-4 h-4" />
+            下一章
           </button>
-        </div>
-
-        {/* Row 2: Actions and Reading Progress */}
-        <div className="max-w-4xl mx-auto px-4 h-12 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDrawer(true);
-              }}
-              className="px-2.5 py-1.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10 flex items-center gap-1.5 transition-colors font-medium"
-              title="打开目录"
-            >
-              <List className="w-4 h-4" />
-              <span>目录</span>
-            </button>
-            <span className="opacity-60 text-[11px] font-mono">阅读进度 {readingProgress}%</span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowSettingsModal(true);
-              }}
-              className="px-2.5 py-1.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10 flex items-center gap-1.5 transition-colors font-medium"
-              title="排版与主题设置"
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              <span className="hidden sm:inline">排版</span>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowTts(!showTts);
-              }}
-              className={`px-2.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors font-medium ${
-                showTts
-                  ? 'bg-black text-white'
-                  : 'hover:bg-black/5 dark:hover:bg-white/10'
-              }`}
-              title={showTts ? '关闭听书' : '开启听书'}
-            >
-              <Headphones className="w-4 h-4" />
-              <span className="hidden sm:inline">听书</span>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowBookmarkModal(true);
-              }}
-              className="px-2.5 py-1.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10 flex items-center gap-1.5 transition-colors font-medium"
-              title="书签管理"
-            >
-              <Bookmark className="w-4 h-4" />
-              <span className="hidden sm:inline">书签</span>
-            </button>
-          </div>
         </div>
       </footer>
 
