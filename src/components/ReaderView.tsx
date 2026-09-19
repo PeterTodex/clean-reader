@@ -143,7 +143,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         const cached = chapterCacheRef.current.get(targetChapterId)!;
         setChapter(cached);
         window.scrollTo({ top: 0, behavior: 'instant' });
-        router.push(`/read/${cached.bookId}/${cached.id}?source=${sourceId}`, { scroll: false });
+        window.history.replaceState(null, '', `/read/${cached.bookId}/${cached.id}?source=${sourceId}`);
         return;
       }
 
@@ -157,7 +157,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           chapterCacheRef.current.set(targetChapterId, data.data);
           setChapter(data.data);
           window.scrollTo({ top: 0, behavior: 'instant' });
-          router.push(`/read/${data.data.bookId}/${data.data.id}?source=${sourceId}`, { scroll: false });
+          window.history.replaceState(null, '', `/read/${data.data.bookId}/${data.data.id}?source=${sourceId}`);
         } else {
           alert(`加载章节失败: ${data.error || '未知错误'}`);
         }
@@ -167,7 +167,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         setIsLoading(false);
       }
     },
-    [chapter.bookId, sourceId, isLoading, router]
+    [chapter.bookId, sourceId, isLoading]
   );
 
   // TTS next chapter auto trigger
@@ -195,6 +195,12 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         navigateToChapter(chapter.prevChapterId);
       } else if (e.key === 'ArrowRight' && chapter.nextChapterId) {
         navigateToChapter(chapter.nextChapterId);
+      } else if (e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) {
+        e.preventDefault();
+        window.scrollBy({ top: Math.round(window.innerHeight * 0.85), behavior: 'smooth' });
+      } else if (e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) {
+        e.preventDefault();
+        window.scrollBy({ top: -Math.round(window.innerHeight * 0.85), behavior: 'smooth' });
       } else if (e.key === 'f' || e.key === 'F') {
         toggleFullscreen();
       } else if (e.key === 'Escape') {
@@ -234,6 +240,57 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         return 'system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif';
       default:
         return '"Noto Serif SC", "Source Han Serif SC", SimSun, serif';
+    }
+  };
+
+  // Click-to-turn-page handler: top half = page up, bottom half = page down, center = toggle menu
+  const handleContentClick = (e: React.MouseEvent<HTMLElement>) => {
+    // 1. If text is being selected, do not trigger page turning
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim().length > 0) return;
+
+    // 2. If controls are open, close them
+    if (showControls) {
+      setShowControls(false);
+      return;
+    }
+
+    const vh = window.innerHeight;
+    const vw = window.innerWidth;
+    const clientY = e.clientY;
+    const clientX = e.clientX;
+    const yRatio = clientY / vh;
+    const xRatio = clientX / vw;
+
+    // 3. Center tap zone (middle 24% vertically, center 50% horizontally): toggle controls menu
+    if (yRatio >= 0.38 && yRatio <= 0.62 && xRatio >= 0.25 && xRatio <= 0.75) {
+      setShowControls(true);
+      return;
+    }
+
+    // 4. Page distance: 85% of screen height (comfortable overlap)
+    const pageDistance = Math.round(vh * 0.85);
+
+    if (yRatio < 0.5) {
+      // 上半部分：上一页
+      if (window.scrollY <= 15) {
+        if (chapter.prevChapterId) {
+          navigateToChapter(chapter.prevChapterId);
+        }
+      } else {
+        window.scrollBy({ top: -pageDistance, behavior: 'smooth' });
+      }
+    } else {
+      // 下半部分：下一页
+      const scrollBottom = window.scrollY + vh;
+      const docHeight = document.documentElement.scrollHeight;
+      if (scrollBottom >= docHeight - 30) {
+        if (chapter.nextChapterId) {
+          navigateToChapter(chapter.nextChapterId);
+        }
+      } else {
+        window.scrollBy({ top: pageDistance, behavior: 'smooth' });
+      }
     }
   };
 
@@ -301,7 +358,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       {/* Main Reading Area */}
       <main
         ref={containerRef}
-        onClick={() => setShowControls(!showControls)}
+        onClick={handleContentClick}
         className="mx-auto px-5 sm:px-8 pt-20 pb-32 cursor-pointer select-text"
         style={{
           maxWidth: `${settings.maxWidth}px`,
@@ -440,6 +497,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         bookId={chapter.bookId}
         sourceId={sourceId}
         currentChapterId={chapter.id}
+        onSelectChapter={(targetId) => {
+          setShowDrawer(false);
+          navigateToChapter(targetId);
+        }}
       />
 
       {/* Settings Modal */}

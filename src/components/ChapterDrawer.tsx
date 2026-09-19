@@ -12,6 +12,7 @@ interface ChapterDrawerProps {
   bookId: string;
   sourceId: string;
   currentChapterId: string;
+  onSelectChapter?: (chapterId: string) => void;
 }
 
 export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
@@ -21,6 +22,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
   bookId,
   sourceId,
   currentChapterId,
+  onSelectChapter,
 }) => {
   const [search, setSearch] = useState('');
   const [isReverse, setIsReverse] = useState(false);
@@ -97,7 +99,14 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
                 <Link
                   key={c.id}
                   href={`/read/${bookId}/${c.id}?source=${sourceId}`}
-                  onClick={onClose}
+                  onClick={(e) => {
+                    if (onSelectChapter) {
+                      e.preventDefault();
+                      onSelectChapter(c.id);
+                    } else {
+                      onClose();
+                    }
+                  }}
                   className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-colors ${
                     isCurrent
                       ? 'bg-zinc-100 text-black font-bold'

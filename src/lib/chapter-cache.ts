@@ -1,6 +1,6 @@
 import { mkdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { ChapterContent } from '@/sources/types';
+import { ChapterContent, BookDetail } from '@/sources/types';
 
 /**
  * Server-side relay cache for chapter bodies.
@@ -151,6 +151,16 @@ function openDb(): DatabaseSync | null {
       );
       CREATE INDEX IF NOT EXISTS idx_chapters_lru  ON chapters(last_access);
       CREATE INDEX IF NOT EXISTS idx_chapters_book ON chapters(source_id, book_id);
+
+      CREATE TABLE IF NOT EXISTS books (
+        key            TEXT PRIMARY KEY,
+        source_id      TEXT NOT NULL,
+        book_id        TEXT NOT NULL,
+        payload        TEXT NOT NULL,
+        cached_at      INTEGER NOT NULL,
+        last_access    INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_books_key ON books(key);
     `);
 
     console.log(`[chapter-cache] Opened ${DB_PATH}`);
@@ -420,5 +430,107 @@ export function getChapterCacheStats(): ChapterCacheStats {
   } catch (err: any) {
     console.warn('[chapter-cache] Stats failed:', err?.message || err);
     return { ...EMPTY_STATS, diskBytes: diskUsage(), payloadBytes: 0 };
+  }
+}
+
+// ==============================================================================
+// Book Detail Cache (SQLite)
+// ==============================================================================
+
+const BOOK_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+const inFlightBooks = new Map<string, Promise<BookDetail>>();
+
+export function bookCacheKey(sourceId: string, bookId: string): string {
+  return `${sourceId}::${bookId}`;
+}
+
+export function readCachedBook(sourceId: string, bookId: string): BookDetail | null {
+  try {
+    const db = openDb();
+    if (!db) return null;
+
+    const key = bookCacheKey(sourceId, bookId);
+    const row = db
+      .prepare('SELECT payload, cached_at FROM books WHERE key = ?')
+      .get(key) as { payload: string; cached_at: number } | undefined;
+
+    if (!row) return null;
+
+    const now = Date.now();
+    if (now - row.cached_at > BOOK_TTL_MS) {
+      db.prepare('DELETE FROM books WHERE key = ?').run(key);
+      return null;
+    }
+
+    let parsed: BookDetail;
+    try {
+      parsed = JSON.parse(row.payload) as BookDetail;
+    } catch {
+      db.prepare('DELETE FROM books WHERE key = ?').run(key);
+      return null;
+    }
+
+    if (!parsed || !Array.isArray(parsed.chapters) || parsed.chapters.length === 0) {
+      db.prepare('DELETE FROM books WHERE key = ?').run(key);
+      return null;
+    }
+
+    return parsed;
+  } catch (err: any) {
+    console.warn('[chapter-cache] Read book failed:', err?.message || err);
+    return null;
+  }
+}
+
+export function writeCachedBook(sourceId: string, bookId: string, detail: BookDetail): void {
+  if (!detail || !Array.isArray(detail.chapters) || detail.chapters.length === 0) return;
+  try {
+    const db = openDb();
+    if (!db) return;
+
+    const key = bookCacheKey(sourceId, bookId);
+    const now = Date.now();
+    const payload = JSON.stringify(detail);
+
+    db.prepare(`
+      INSERT INTO books (key, source_id, book_id, payload, cached_at, last_access)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET
+        payload = excluded.payload,
+        cached_at = excluded.cached_at,
+        last_access = excluded.last_access
+    `).run(key, sourceId, bookId, payload, now, now);
+  } catch (err: any) {
+    console.warn('[chapter-cache] Write book failed:', err?.message || err);
+  }
+}
+
+export async function fetchBookWithCache(
+  sourceId: string,
+  bookId: string,
+  fetcher: () => Promise<BookDetail>,
+  forceRefresh = false
+): Promise<{ detail: BookDetail; cached: boolean }> {
+  const key = bookCacheKey(sourceId, bookId);
+
+  if (!forceRefresh) {
+    const cached = readCachedBook(sourceId, bookId);
+    if (cached) return { detail: cached, cached: true };
+  }
+
+  const pending = inFlightBooks.get(key);
+  if (pending) {
+    const detail = await pending;
+    return { detail, cached: false };
+  }
+
+  const promise = fetcher();
+  inFlightBooks.set(key, promise);
+  try {
+    const detail = await promise;
+    writeCachedBook(sourceId, bookId, detail);
+    return { detail, cached: false };
+  } finally {
+    inFlightBooks.delete(key);
   }
 }

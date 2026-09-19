@@ -7,6 +7,10 @@ import { ChapterContent, ChapterItem, BookDetail } from '@/sources/types';
 import Link from 'next/link';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 
+// In-memory module cache for instant transitions across navigation
+const clientChapterCache = new Map<string, ChapterContent>();
+const clientBookCache = new Map<string, BookDetail>();
+
 export default function ReaderPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -15,31 +19,63 @@ export default function ReaderPage() {
   const chapterId = params.chapterId as string;
   const sourceId = searchParams.get('source') || '';
 
-  const [chapter, setChapter] = useState<ChapterContent | null>(null);
-  const [book, setBook] = useState<BookDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const chapterKey = `${sourceId}::${bookId}::${chapterId}`;
+  const bookKey = `${sourceId}::${bookId}`;
+
+  const [chapter, setChapter] = useState<ChapterContent | null>(() => clientChapterCache.get(chapterKey) || null);
+  const [book, setBook] = useState<BookDetail | null>(() => clientBookCache.get(bookKey) || null);
+  const [loading, setLoading] = useState(!clientChapterCache.has(chapterKey));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!bookId || !chapterId) return;
 
-    setLoading(true);
+    // 1. If currently rendered chapter already matches, do nothing
+    if (chapter && chapter.id === chapterId && chapter.bookId === bookId) {
+      return;
+    }
+
+    // 2. If present in client memory cache, switch instantly without loading spinner
+    if (clientChapterCache.has(chapterKey)) {
+      setChapter(clientChapterCache.get(chapterKey)!);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    // 3. Only show full-screen spinner if no chapter is displayed yet
+    if (!chapter) {
+      setLoading(true);
+    }
     setError(null);
 
-    // Fetch chapter and book detail in parallel
-    Promise.all([
+    const promises: Promise<any>[] = [
       fetch(`/api/chapter?bookId=${bookId}&chapterId=${chapterId}&source=${sourceId}`).then((res) =>
         res.json()
       ),
-      fetch(`/api/book?id=${bookId}&source=${sourceId}`).then((res) => res.json()),
-    ])
+    ];
+
+    // Only fetch book detail if not already available in memory or state
+    if (!book || book.id !== bookId) {
+      if (clientBookCache.has(bookKey)) {
+        setBook(clientBookCache.get(bookKey)!);
+      } else {
+        promises.push(
+          fetch(`/api/book?id=${bookId}&source=${sourceId}`).then((res) => res.json())
+        );
+      }
+    }
+
+    Promise.all(promises)
       .then(([chapterData, bookData]) => {
         if (!chapterData.success) {
           throw new Error(chapterData.error || '加载章节内容失败');
         }
+        clientChapterCache.set(chapterKey, chapterData.data);
         setChapter(chapterData.data);
 
-        if (bookData.success && bookData.data) {
+        if (bookData && bookData.success && bookData.data) {
+          clientBookCache.set(bookKey, bookData.data);
           setBook(bookData.data);
         }
       })
@@ -49,9 +85,9 @@ export default function ReaderPage() {
       .finally(() => {
         setLoading(false);
       });
-  }, [bookId, chapterId, sourceId]);
+  }, [bookId, chapterId, sourceId, chapterKey, bookKey, chapter, book]);
 
-  if (loading) {
+  if (loading && !chapter) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafafa] text-zinc-800">
         <div className="w-9 h-9 border-2 border-black border-t-transparent rounded-full animate-spin mb-3" />
