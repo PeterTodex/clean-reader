@@ -1,14 +1,21 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BookOpen, Library, Settings, Search } from 'lucide-react';
+import { storage } from '@/lib/storage';
 
 interface HeaderProps {
   onSearchFocus?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ onSearchFocus }) => {
+  const [shelfCount, setShelfCount] = useState<number>(0);
+
+  useEffect(() => {
+    setShelfCount(storage.getBookshelf().length);
+  }, []);
+
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-zinc-200/80 transition-colors">
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -34,12 +41,17 @@ export const Header: React.FC<HeaderProps> = ({ onSearchFocus }) => {
           )}
 
           <Link
-            href="/"
+            href="/bookshelf"
             className="p-2 sm:px-3 sm:py-1.5 text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 rounded-lg flex items-center gap-1.5 transition-colors text-sm font-medium"
             title="我的书架"
           >
             <Library className="w-4 h-4" />
             <span className="hidden sm:inline">书架</span>
+            {shelfCount > 0 && (
+              <span className="text-[10px] font-mono bg-zinc-900 text-white px-1.5 py-0.2 rounded-full leading-tight">
+                {shelfCount}
+              </span>
+            )}
           </Link>
 
           <Link

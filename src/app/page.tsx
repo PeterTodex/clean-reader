@@ -3,16 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
-import { Bookshelf } from '@/components/Bookshelf';
 import { BookCoverPlaceholder } from '@/components/BookCoverPlaceholder';
 import { SearchResult, SourceMeta, HomeSection } from '@/sources/types';
-import { BookshelfItem, storage } from '@/lib/storage';
 import { HomeFeed } from '@/components/HomeFeed';
 import {
   Search,
   BookOpen,
   Terminal,
-  Library,
   Flame,
   RefreshCw,
 } from 'lucide-react';
@@ -26,15 +23,12 @@ export default function HomePage() {
   const [hasSearched, setHasSearched] = useState(false);
   const [sources, setSources] = useState<SourceMeta[]>([]);
   const [selectedSource, setSelectedSource] = useState<string>('');
-  const [bookshelfItems, setBookshelfItems] = useState<BookshelfItem[]>([]);
   const [homeSections, setHomeSections] = useState<HomeSection[]>([]);
   const [isLoadingHome, setIsLoadingHome] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Load bookshelf and sources on mount
+  // Load sources on mount
   useEffect(() => {
-    setBookshelfItems(storage.getBookshelf());
-
     fetch('/api/sources')
       .then((res) => res.json())
       .then((data) => {
@@ -68,9 +62,6 @@ export default function HomePage() {
       .finally(() => setIsLoadingHome(false));
   }, [selectedSource]);
 
-  const handleRefreshShelf = () => {
-    setBookshelfItems(storage.getBookshelf());
-  };
 
   const handleSearch = async (queryToSearch?: string) => {
     const q = (queryToSearch !== undefined ? queryToSearch : keyword).trim();
@@ -261,24 +252,6 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* Bookshelf Section */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between border-b border-zinc-200 pb-3">
-            <h2 className="font-bold text-lg text-zinc-950 flex items-center gap-2">
-              <Library className="w-5 h-5 text-black" />
-              我的书架
-            </h2>
-            <span className="text-xs text-zinc-500 font-mono">
-              藏书 {bookshelfItems.length} 本
-            </span>
-          </div>
-
-          <Bookshelf
-            items={bookshelfItems}
-            onRefresh={handleRefreshShelf}
-            onOpenSearch={focusSearch}
-          />
-        </section>
 
         {/* Source Switcher & Home Feed */}
         {(homeSections.length > 0 || isLoadingHome || sources.length > 1) && (
