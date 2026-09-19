@@ -160,8 +160,8 @@ if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
     pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
 fi
 
-# 启动新实例
-pm2 start pnpm --name "$APP_NAME" -- start -- -p "$PORT"
+# 启动新实例 (直接通过 Node 运行 Next.js 二进制文件，避免 pnpm 传递参数多出 '--' 导致 Next.js 误把 -p 当作目录)
+pm2 start node_modules/next/dist/bin/next --name "$APP_NAME" --cwd "$APP_DIR" -- start -p "$PORT"
 pm2 save
 
 # 尝试配置开机自启
