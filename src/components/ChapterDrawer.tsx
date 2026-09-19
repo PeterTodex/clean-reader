@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { ChapterItem } from '@/sources/types';
 import { X, Search, ArrowUpDown, Bookmark } from 'lucide-react';
@@ -26,6 +26,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
 }) => {
   const [search, setSearch] = useState('');
   const [isReverse, setIsReverse] = useState(false);
+  const currentItemRef = useRef<HTMLAnchorElement | null>(null);
 
   const displayedChapters = useMemo(() => {
     let list = [...chapters];
@@ -38,6 +39,21 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
     }
     return list;
   }, [chapters, search, isReverse]);
+
+  // Auto-scroll current chapter to center when drawer is opened
+  useEffect(() => {
+    if (isOpen && !search.trim()) {
+      const timer = setTimeout(() => {
+        if (currentItemRef.current) {
+          currentItemRef.current.scrollIntoView({
+            behavior: 'instant',
+            block: 'center',
+          });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, currentChapterId, isReverse, search]);
 
   if (!isOpen) return null;
 
@@ -94,10 +110,11 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
             <div className="p-8 text-center text-xs text-zinc-400">没有匹配到相关章节</div>
           ) : (
             displayedChapters.map((c) => {
-              const isCurrent = c.id === currentChapterId;
+              const isCurrent = String(c.id) === String(currentChapterId);
               return (
                 <Link
                   key={c.id}
+                  ref={isCurrent ? currentItemRef : null}
                   href={`/read/${bookId}/${c.id}?source=${sourceId}`}
                   onClick={(e) => {
                     if (onSelectChapter) {
@@ -109,13 +126,13 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
                   }}
                   className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-xs transition-colors ${
                     isCurrent
-                      ? 'bg-zinc-100 text-black font-bold'
+                      ? 'bg-amber-50 text-amber-950 font-bold border-l-2 border-amber-800'
                       : 'text-zinc-700 hover:bg-zinc-50 hover:text-black'
                   }`}
                 >
                   <span className="line-clamp-1 flex-1 pr-2">{c.title}</span>
                   {isCurrent && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-black text-white font-mono font-normal flex-shrink-0">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-800 text-white font-mono font-normal flex-shrink-0">
                       当前
                     </span>
                   )}
