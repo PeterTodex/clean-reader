@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { BookOpen, Library, Settings, Search, Clock, Palette, Check } from 'lucide-react';
+import { BookOpen, Library, Settings, Search, Palette, Check } from 'lucide-react';
 import { storage } from '@/lib/storage';
 import { THEMES, setGlobalTheme, getGlobalTheme, ThemeType, THEME_CHANGE_EVENT } from '@/lib/theme';
 
@@ -89,15 +89,6 @@ export const Header: React.FC<HeaderProps> = ({ onSearchClick, onSearchFocus }) 
                 {shelfCount}
               </span>
             )}
-          </Link>
-
-          <Link
-            href="/history"
-            className="p-2 sm:px-3 sm:py-1.5 text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 rounded-lg flex items-center gap-1.5 transition-colors text-sm font-medium"
-            title="阅读历史"
-          >
-            <Clock className="w-4 h-4" />
-            <span className="hidden sm:inline">历史</span>
           </Link>
 
           <Link

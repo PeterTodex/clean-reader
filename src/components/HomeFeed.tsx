@@ -23,7 +23,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
           <div className="w-5 h-5 bg-zinc-200 rounded" />
           <div className="w-32 h-6 bg-zinc-200 rounded" />
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2.5 sm:gap-4">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="space-y-2">
               <div className="w-full aspect-[4/5] bg-zinc-200 rounded-lg" />
@@ -69,12 +69,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3.5 sm:gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4">
                 {section.items.map((book) => (
                   <Link
                     key={book.id}
                     href={`/book/${book.id}?source=${sourceId}`}
-                    className="group flex flex-col space-y-2 p-2 rounded-xl bg-white border border-zinc-200/70 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all"
+                    className="group flex flex-col space-y-1.5 sm:space-y-2 p-1.5 sm:p-2 rounded-xl bg-white border border-zinc-200/70 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all"
                   >
                     <div className="w-full aspect-[4/5] rounded-lg overflow-hidden relative bg-zinc-100 shadow-inner">
                       {book.cover ? (
@@ -103,7 +103,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                         {book.title}
                       </h3>
                       {book.author && (
-                        <p className="text-[11px] text-zinc-500 truncate mt-1">{book.author}</p>
+                        <p className="text-[10px] sm:text-[11px] text-zinc-500 truncate mt-0.5 sm:mt-1">{book.author}</p>
                       )}
                     </div>
                   </Link>
@@ -225,12 +225,12 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
               </div>
 
               {/* Tab Content Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3.5 sm:gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4">
                 {currentTab?.items?.map((book) => (
                   <Link
                     key={book.id}
                     href={`/book/${book.id}?source=${sourceId}`}
-                    className="group flex flex-col space-y-2 p-2 rounded-xl bg-white border border-zinc-200/70 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all"
+                    className="group flex flex-col space-y-1.5 sm:space-y-2 p-1.5 sm:p-2 rounded-xl bg-white border border-zinc-200/70 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all"
                   >
                     <div className="w-full aspect-[4/5] rounded-lg overflow-hidden relative bg-zinc-100 shadow-inner">
                       {book.cover ? (
@@ -258,7 +258,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                         {book.title}
                       </h3>
                       {book.author && (
-                        <p className="text-[11px] text-zinc-500 truncate mt-1">{book.author}</p>
+                        <p className="text-[10px] sm:text-[11px] text-zinc-500 truncate mt-0.5 sm:mt-1">{book.author}</p>
                       )}
                     </div>
                   </Link>
