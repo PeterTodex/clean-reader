@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Header';
@@ -36,7 +36,7 @@ function formatRelativeTime(timestamp: number): string {
 
 type TabType = 'shelf' | 'history';
 
-export default function BookshelfPage() {
+function BookshelfContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -334,5 +334,13 @@ export default function BookshelfPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function BookshelfPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <BookshelfContent />
+    </Suspense>
   );
 }
