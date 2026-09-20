@@ -436,7 +436,7 @@ export const TtsPlayer: React.FC<TtsPlayerProps> = ({
               <select
                 value={selectedVoiceURI}
                 onChange={(e) => handleVoiceChange(e.target.value)}
-                className="text-xs py-1 px-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 max-w-[130px] sm:max-w-[150px] truncate focus:outline-none focus:ring-1 focus:ring-black"
+                className="text-xs py-1 px-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 max-w-[130px] sm:max-w-[150px] truncate focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:border-zinc-400"
               >
                 {voices.map((v) => (
                   <option key={v.voiceURI} value={v.voiceURI}>

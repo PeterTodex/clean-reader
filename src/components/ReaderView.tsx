@@ -8,7 +8,7 @@ import { ReaderSettings, storage } from '@/lib/storage';
 import { THEME_CHANGE_EVENT, ThemeType } from '@/lib/theme';
 import { ReaderSettingsModal } from './ReaderSettingsModal';
 import { ChapterDrawer } from './ChapterDrawer';
-import { BookmarkModal } from './BookmarkModal';
+import { BookContentSearchModal } from './BookContentSearchModal';
 import { TtsPlayer } from './TtsPlayer';
 import {
   ArrowLeft,
@@ -17,8 +17,9 @@ import {
   List,
   SlidersHorizontal,
   BookOpen,
-  Bookmark,
   Headphones,
+  Search,
+  X,
 } from 'lucide-react';
 
 interface ReaderViewProps {
@@ -47,7 +48,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const [settings, setSettings] = useState<ReaderSettings>(storage.getSettings());
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
-  const [showBookmarkModal, setShowBookmarkModal] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [highlightKeyword, setHighlightKeyword] = useState<string | null>(null);
   const [showTts, setShowTts] = useState(false);
   const [ttsParagraphIndex, setTtsParagraphIndex] = useState(0);
   const [showControls, setShowControls] = useState(true);
@@ -130,6 +132,32 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     const target = chapter.paragraphs[ttsParagraphIndex] || chapter.paragraphs[0] || '';
     return target.replace(/<[^>]*>/g, '').trim().slice(0, 120);
   }, [chapter, ttsParagraphIndex]);
+
+  // Highlight keyword inside paragraphs
+  const renderParagraphHtml = useCallback(
+    (para: string) => {
+      if (!highlightKeyword || !highlightKeyword.trim()) return para;
+      const escaped = highlightKeyword.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${escaped})`, 'gi');
+      return para.replace(
+        regex,
+        '<mark class="highlight-search-kw">$1</mark>'
+      );
+    },
+    [highlightKeyword]
+  );
+
+  // Auto-scroll to first highlighted keyword match when arriving in chapter
+  useEffect(() => {
+    if (!highlightKeyword) return;
+    const timer = setTimeout(() => {
+      const firstMark = document.querySelector('mark.highlight-search-kw');
+      if (firstMark) {
+        firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [highlightKeyword, chapter.id, switchingChapter]);
 
   // Put initial chapter into cache and sync when initialChapter prop changes
   useEffect(() => {
@@ -326,7 +354,6 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       } else if (e.key === 'Escape') {
         setShowSettingsModal(false);
         setShowDrawer(false);
-        setShowBookmarkModal(false);
       }
     };
 
@@ -467,11 +494,11 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
           <div className="flex items-center gap-1.5 sm:gap-2">
             <button
-              onClick={() => setShowBookmarkModal(true)}
+              onClick={() => setShowSearchModal(true)}
               className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-              title="书签管理"
+              title="正文搜索 / 查出场"
             >
-              <Bookmark className="w-5 h-5" />
+              <Search className="w-5 h-5" />
             </button>
             <button
               onClick={() => setShowTts(!showTts)}
@@ -487,7 +514,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             <button
               onClick={() => setShowDrawer(true)}
               className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-              title="目录"
+              title="目录与书签"
             >
               <List className="w-5 h-5" />
             </button>
@@ -589,7 +616,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                           setTtsParagraphIndex(pIdx);
                         }
                       }}
-                      dangerouslySetInnerHTML={{ __html: para }}
+                      dangerouslySetInnerHTML={{ __html: renderParagraphHtml(para) }}
                       className={`transition-all duration-300 ${
                         isTtsActive
                           ? 'bg-zinc-200/80 dark:bg-zinc-800/80 border-l-4 border-black dark:border-white pl-3.5 py-0.5 rounded-r shadow-sm font-medium'
@@ -679,6 +706,20 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         </div>
       </footer>
 
+      {/* Floating Highlight Keyword Notice */}
+      {highlightKeyword && (
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-zinc-900/90 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-mono shadow-md select-none">
+          <span>定位：“{highlightKeyword}”</span>
+          <button
+            onClick={() => setHighlightKeyword(null)}
+            className="text-zinc-400 hover:text-white ml-0.5 p-0.5 rounded-full transition-colors"
+            title="清除高亮"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Chapter Drawer */}
       <ChapterDrawer
         isOpen={showDrawer}
@@ -687,10 +728,28 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         bookId={chapter.bookId}
         sourceId={sourceId}
         currentChapterId={switchingChapter ? switchingChapter.id : chapter.id}
+        currentChapterTitle={switchingChapter ? switchingChapter.title : chapter.title}
+        currentExcerpt={currentExcerpt}
         cachedChapterIds={cachedChapterIds}
         onSelectChapter={(targetId) => {
           setShowDrawer(false);
           navigateToChapter(targetId);
+        }}
+        onOpenSearchContent={() => setShowSearchModal(true)}
+      />
+
+      {/* Book Content Search Modal */}
+      <BookContentSearchModal
+        isOpen={showSearchModal}
+        onClose={() => setShowSearchModal(false)}
+        bookId={chapter.bookId}
+        sourceId={sourceId}
+        currentChapterId={switchingChapter ? switchingChapter.id : chapter.id}
+        chapters={chapters}
+        themeClass={themeClass}
+        onSelectChapter={(targetChapterId, kw) => {
+          setHighlightKeyword(kw);
+          navigateToChapter(targetChapterId);
         }}
       />
 
@@ -700,18 +759,6 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         onClose={() => setShowSettingsModal(false)}
         settings={settings}
         onUpdateSettings={handleUpdateSettings}
-      />
-
-      {/* Bookmark Modal */}
-      <BookmarkModal
-        isOpen={showBookmarkModal}
-        onClose={() => setShowBookmarkModal(false)}
-        bookId={chapter.bookId}
-        sourceId={sourceId}
-        currentChapterId={chapter.id}
-        currentChapterTitle={chapter.title}
-        currentExcerpt={currentExcerpt}
-        onSelectBookmark={(targetChapterId) => navigateToChapter(targetChapterId)}
       />
 
       {/* TTS Audio Player */}

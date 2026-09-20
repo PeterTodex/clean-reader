@@ -861,3 +861,151 @@ export async function startBackgroundBookCache(
     alreadyRunning: false,
   };
 }
+
+export interface ChapterSearchMatch {
+  chapterId: string;
+  index: number;
+  title: string;
+  count: number;
+  snippets: string[];
+}
+
+export interface BookSearchResult {
+  keyword: string;
+  totalMatches: number;
+  matchedChapterCount: number;
+  cachedChapterCount: number;
+  totalChapterCount: number;
+  results: ChapterSearchMatch[];
+}
+
+interface SearchCacheEntry {
+  timestamp: number;
+  result: BookSearchResult;
+}
+
+const searchCache = new Map<string, SearchCacheEntry>();
+const SEARCH_CACHE_TTL_MS = 120000; // 2 minutes
+
+/**
+ * Scan all cached chapter files of a book for a given keyword.
+ * Counts occurrences per chapter, extracts context snippets, and returns results in chapter order.
+ */
+export function searchCachedBookContent(
+  sourceId: string,
+  bookId: string,
+  keyword: string
+): BookSearchResult {
+  const cleanKeyword = keyword.trim();
+  if (!cleanKeyword || cleanKeyword.length > 50) {
+    return {
+      keyword: cleanKeyword,
+      totalMatches: 0,
+      matchedChapterCount: 0,
+      cachedChapterCount: 0,
+      totalChapterCount: 0,
+      results: [],
+    };
+  }
+
+  const cacheKey = `${sourceId}::${bookId}::${cleanKeyword.toLowerCase()}`;
+  const now = Date.now();
+  const cached = searchCache.get(cacheKey);
+  if (cached && now - cached.timestamp < SEARCH_CACHE_TTL_MS) {
+    return cached.result;
+  }
+
+  const bookDir = findBookDir(sourceId, bookId);
+  const toc = readToc(sourceId, bookId);
+
+  if (!bookDir || !toc || !Array.isArray(toc.chapters) || toc.chapters.length === 0) {
+    return {
+      keyword: cleanKeyword,
+      totalMatches: 0,
+      matchedChapterCount: 0,
+      cachedChapterCount: 0,
+      totalChapterCount: 0,
+      results: [],
+    };
+  }
+
+  const chaptersDir = join(bookDir, 'chapters');
+  if (!existsSync(chaptersDir)) {
+    return {
+      keyword: cleanKeyword,
+      totalMatches: 0,
+      matchedChapterCount: 0,
+      cachedChapterCount: 0,
+      totalChapterCount: toc.chapters.length,
+      results: [],
+    };
+  }
+
+  const results: ChapterSearchMatch[] = [];
+  let totalMatches = 0;
+  let cachedCount = 0;
+  const lowerKeyword = cleanKeyword.toLowerCase();
+
+  for (const ch of toc.chapters) {
+    const filePath = join(chaptersDir, ch.fileName);
+    if (!existsSync(filePath)) continue;
+    cachedCount++;
+
+    let raw: string;
+    try {
+      raw = readFileSync(filePath, 'utf-8');
+    } catch {
+      continue;
+    }
+
+    const lowerRaw = raw.toLowerCase();
+    if (!lowerRaw.includes(lowerKeyword)) continue;
+
+    let count = 0;
+    let pos = 0;
+    const snippets: string[] = [];
+
+    while ((pos = lowerRaw.indexOf(lowerKeyword, pos)) !== -1) {
+      count++;
+      if (snippets.length < 2) {
+        const start = Math.max(0, pos - 25);
+        const end = Math.min(raw.length, pos + cleanKeyword.length + 25);
+        let snippet = raw.slice(start, end).replace(/\r?\n+/g, ' ').trim();
+        if (start > 0) snippet = '...' + snippet;
+        if (end < raw.length) snippet = snippet + '...';
+        snippets.push(snippet);
+      }
+      pos += cleanKeyword.length;
+    }
+
+    if (count > 0) {
+      totalMatches += count;
+      results.push({
+        chapterId: ch.id,
+        index: ch.index,
+        title: ch.title,
+        count,
+        snippets,
+      });
+    }
+  }
+
+  const result: BookSearchResult = {
+    keyword: cleanKeyword,
+    totalMatches,
+    matchedChapterCount: results.length,
+    cachedChapterCount: cachedCount,
+    totalChapterCount: toc.chapters.length,
+    results,
+  };
+
+  // Keep search cache bounded to 100 entries
+  if (searchCache.size > 100) {
+    const firstKey = searchCache.keys().next().value;
+    if (firstKey) searchCache.delete(firstKey);
+  }
+  searchCache.set(cacheKey, { timestamp: now, result });
+
+  return result;
+}
+

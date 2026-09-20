@@ -165,7 +165,11 @@ html.theme-apricot body {
 .theme-navy .bg-white,
 .theme-parchment .bg-white,
 .theme-eyecare .bg-white,
-.theme-apricot .bg-white {
+.theme-apricot .bg-white,
+.theme-dark .dark\:bg-zinc-900,
+.theme-navy .dark\:bg-zinc-900,
+.theme-dark .dark\:bg-zinc-900\/50,
+.theme-navy .dark\:bg-zinc-900\/50 {
   background-color: var(--bg-card) !important;
 }
 
@@ -197,7 +201,22 @@ html.theme-apricot body {
 .theme-navy .bg-zinc-50\/50,
 .theme-parchment .bg-zinc-50\/50,
 .theme-eyecare .bg-zinc-50\/50,
-.theme-apricot .bg-zinc-50\/50 {
+.theme-apricot .bg-zinc-50\/50,
+.theme-dark .bg-zinc-50\/60,
+.theme-navy .bg-zinc-50\/60,
+.theme-parchment .bg-zinc-50\/60,
+.theme-eyecare .bg-zinc-50\/60,
+.theme-apricot .bg-zinc-50\/60,
+.theme-dark .bg-zinc-50\/70,
+.theme-navy .bg-zinc-50\/70,
+.theme-parchment .bg-zinc-50\/70,
+.theme-eyecare .bg-zinc-50\/70,
+.theme-apricot .bg-zinc-50\/70,
+.theme-dark .bg-zinc-100\/50,
+.theme-navy .bg-zinc-100\/50,
+.theme-parchment .bg-zinc-100\/50,
+.theme-eyecare .bg-zinc-100\/50,
+.theme-apricot .bg-zinc-100\/50 {
   background-color: var(--bg-subtle) !important;
 }
 
@@ -225,11 +244,13 @@ html.theme-apricot body {
 .theme-dark .border-zinc-200\/70,
 .theme-dark .border-zinc-200\/80,
 .theme-dark .border-zinc-300,
+.theme-dark .dark\:border-zinc-800,
 .theme-dark .border-stone-200\/70,
 .theme-navy .border-zinc-200,
 .theme-navy .border-zinc-200\/70,
 .theme-navy .border-zinc-200\/80,
 .theme-navy .border-zinc-300,
+.theme-navy .dark\:border-zinc-800,
 .theme-navy .border-stone-200\/70,
 .theme-parchment .border-zinc-200,
 .theme-parchment .border-zinc-200\/70,
@@ -255,6 +276,153 @@ html.theme-apricot body {
 .theme-eyecare .border-zinc-100,
 .theme-apricot .border-zinc-100 {
   border-color: var(--border-subtle) !important;
+}
+
+/* Spinner transparent top border preservation */
+.border-t-transparent {
+  border-top-color: transparent !important;
+}
+
+/* Divide borders */
+.theme-dark .divide-zinc-100 > :not([hidden]) ~ :not([hidden]),
+.theme-navy .divide-zinc-100 > :not([hidden]) ~ :not([hidden]),
+.theme-parchment .divide-zinc-100 > :not([hidden]) ~ :not([hidden]),
+.theme-eyecare .divide-zinc-100 > :not([hidden]) ~ :not([hidden]),
+.theme-apricot .divide-zinc-100 > :not([hidden]) ~ :not([hidden]),
+.theme-dark .divide-zinc-800 > :not([hidden]) ~ :not([hidden]),
+.theme-navy .divide-zinc-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border-subtle) !important;
+}
+
+/* Stone color scales */
+.theme-dark .text-stone-900,
+.theme-dark .text-stone-800,
+.theme-navy .text-stone-900,
+.theme-navy .text-stone-800,
+.theme-parchment .text-stone-900,
+.theme-parchment .text-stone-800,
+.theme-eyecare .text-stone-900,
+.theme-eyecare .text-stone-800,
+.theme-apricot .text-stone-900,
+.theme-apricot .text-stone-800 {
+  color: var(--text-primary) !important;
+}
+
+.theme-dark .text-stone-700,
+.theme-dark .text-stone-600,
+.theme-navy .text-stone-700,
+.theme-navy .text-stone-600,
+.theme-parchment .text-stone-700,
+.theme-parchment .text-stone-600,
+.theme-eyecare .text-stone-700,
+.theme-eyecare .text-stone-600,
+.theme-apricot .text-stone-700,
+.theme-apricot .text-stone-600 {
+  color: var(--text-secondary) !important;
+}
+
+.theme-dark .text-stone-500,
+.theme-dark .text-stone-400,
+.theme-navy .text-stone-500,
+.theme-navy .text-stone-400,
+.theme-parchment .text-stone-500,
+.theme-parchment .text-stone-400,
+.theme-eyecare .text-stone-500,
+.theme-eyecare .text-stone-400,
+.theme-apricot .text-stone-500,
+.theme-apricot .text-stone-400 {
+  color: var(--text-muted) !important;
+}
+
+.theme-dark .bg-stone-100,
+.theme-dark .bg-stone-200,
+.theme-dark .bg-stone-200\/80,
+.theme-dark .bg-stone-300,
+.theme-navy .bg-stone-100,
+.theme-navy .bg-stone-200,
+.theme-navy .bg-stone-200\/80,
+.theme-navy .bg-stone-300,
+.theme-parchment .bg-stone-100,
+.theme-parchment .bg-stone-200,
+.theme-parchment .bg-stone-200\/80,
+.theme-parchment .bg-stone-300,
+.theme-eyecare .bg-stone-100,
+.theme-eyecare .bg-stone-200,
+.theme-eyecare .bg-stone-200\/80,
+.theme-eyecare .bg-stone-300,
+.theme-apricot .bg-stone-100,
+.theme-apricot .bg-stone-200,
+.theme-apricot .bg-stone-200\/80,
+.theme-apricot .bg-stone-300 {
+  background-color: var(--bg-subtle) !important;
+}
+
+.theme-dark .border-stone-200,
+.theme-dark .border-stone-300,
+.theme-navy .border-stone-200,
+.theme-navy .border-stone-300,
+.theme-parchment .border-stone-200,
+.theme-parchment .border-stone-300,
+.theme-eyecare .border-stone-200,
+.theme-eyecare .border-stone-300,
+.theme-apricot .border-stone-200,
+.theme-apricot .border-stone-300 {
+  border-color: var(--border-color) !important;
+}
+
+.theme-dark .hover\:bg-stone-50:hover,
+.theme-dark .hover\:bg-stone-100:hover,
+.theme-dark .hover\:bg-stone-200:hover,
+.theme-dark .hover\:bg-stone-300:hover,
+.theme-navy .hover\:bg-stone-50:hover,
+.theme-navy .hover\:bg-stone-100:hover,
+.theme-navy .hover\:bg-stone-200:hover,
+.theme-navy .hover\:bg-stone-300:hover,
+.theme-parchment .hover\:bg-stone-50:hover,
+.theme-parchment .hover\:bg-stone-100:hover,
+.theme-parchment .hover\:bg-stone-200:hover,
+.theme-parchment .hover\:bg-stone-300:hover,
+.theme-eyecare .hover\:bg-stone-50:hover,
+.theme-eyecare .hover\:bg-stone-100:hover,
+.theme-eyecare .hover\:bg-stone-200:hover,
+.theme-eyecare .hover\:bg-stone-300:hover,
+.theme-apricot .hover\:bg-stone-50:hover,
+.theme-apricot .hover\:bg-stone-100:hover,
+.theme-apricot .hover\:bg-stone-200:hover,
+.theme-apricot .hover\:bg-stone-300:hover {
+  background-color: var(--bg-card-hover) !important;
+}
+
+/* Hover opacity variants & additional hovers */
+.theme-dark .hover\:bg-zinc-200\/80:hover,
+.theme-navy .hover\:bg-zinc-200\/80:hover,
+.theme-parchment .hover\:bg-zinc-200\/80:hover,
+.theme-eyecare .hover\:bg-zinc-200\/80:hover,
+.theme-apricot .hover\:bg-zinc-200\/80:hover,
+.theme-dark .hover\:bg-zinc-100\/50:hover,
+.theme-navy .hover\:bg-zinc-100\/50:hover,
+.theme-parchment .hover\:bg-zinc-100\/50:hover,
+.theme-eyecare .hover\:bg-zinc-100\/50:hover,
+.theme-apricot .hover\:bg-zinc-100\/50:hover,
+.theme-dark .hover\:bg-zinc-300:hover,
+.theme-navy .hover\:bg-zinc-300:hover,
+.theme-parchment .hover\:bg-zinc-300:hover,
+.theme-eyecare .hover\:bg-zinc-300:hover,
+.theme-apricot .hover\:bg-zinc-300:hover {
+  background-color: var(--bg-card-hover) !important;
+}
+
+.theme-dark .hover\:border-zinc-300:hover,
+.theme-navy .hover\:border-zinc-300:hover,
+.theme-parchment .hover\:border-zinc-300:hover,
+.theme-eyecare .hover\:border-zinc-300:hover,
+.theme-apricot .hover\:border-zinc-300:hover,
+.theme-dark .hover\:border-stone-300:hover,
+.theme-navy .hover\:border-stone-300:hover,
+.theme-parchment .hover\:border-stone-300:hover,
+.theme-eyecare .hover\:border-stone-300:hover,
+.theme-apricot .hover\:border-stone-300:hover {
+  border-color: var(--text-secondary) !important;
 }
 
 /* Text overrides */
@@ -367,6 +535,160 @@ html.theme-apricot body {
   color: var(--text-primary) !important;
 }
 
+/* Placeholders theme adaptation */
+.theme-dark ::placeholder,
+.theme-navy ::placeholder,
+.theme-parchment ::placeholder,
+.theme-eyecare ::placeholder,
+.theme-apricot ::placeholder,
+.theme-dark .placeholder-zinc-400::placeholder,
+.theme-navy .placeholder-zinc-400::placeholder,
+.theme-parchment .placeholder-zinc-400::placeholder,
+.theme-eyecare .placeholder-zinc-400::placeholder,
+.theme-apricot .placeholder-zinc-400::placeholder,
+.theme-dark .placeholder-stone-400::placeholder,
+.theme-navy .placeholder-stone-400::placeholder,
+.theme-parchment .placeholder-stone-400::placeholder,
+.theme-eyecare .placeholder-stone-400::placeholder,
+.theme-apricot .placeholder-stone-400::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.85 !important;
+}
+
+/* Input, textarea, select text color & caret */
+.theme-dark input,
+.theme-dark textarea,
+.theme-dark select,
+.theme-navy input,
+.theme-navy textarea,
+.theme-navy select,
+.theme-parchment input,
+.theme-parchment textarea,
+.theme-parchment select,
+.theme-eyecare input,
+.theme-eyecare textarea,
+.theme-eyecare select,
+.theme-apricot input,
+.theme-apricot textarea,
+.theme-apricot select {
+  color: var(--text-primary) !important;
+  caret-color: var(--text-primary);
+}
+
+/* Input focus background in themes (avoid harsh white flash) */
+.theme-dark input:focus,
+.theme-dark textarea:focus,
+.theme-dark .focus\:bg-white:focus,
+.theme-dark .focus-within\:bg-white:focus-within,
+.theme-navy input:focus,
+.theme-navy textarea:focus,
+.theme-navy .focus\:bg-white:focus,
+.theme-navy .focus-within\:bg-white:focus-within,
+.theme-parchment input:focus,
+.theme-parchment textarea:focus,
+.theme-parchment .focus\:bg-white:focus,
+.theme-parchment .focus-within\:bg-white:focus-within,
+.theme-eyecare input:focus,
+.theme-eyecare textarea:focus,
+.theme-eyecare .focus\:bg-white:focus,
+.theme-eyecare .focus-within\:bg-white:focus-within,
+.theme-apricot input:focus,
+.theme-apricot textarea:focus,
+.theme-apricot .focus\:bg-white:focus,
+.theme-apricot .focus-within\:bg-white:focus-within {
+  background-color: var(--bg-card) !important;
+}
+
+/* Input focus ring and border */
+.theme-dark input:focus,
+.theme-dark textarea:focus,
+.theme-dark select:focus,
+.theme-dark .focus\:ring-black:focus,
+.theme-dark .focus\:border-black:focus,
+.theme-navy input:focus,
+.theme-navy textarea:focus,
+.theme-navy select:focus,
+.theme-navy .focus\:ring-black:focus,
+.theme-navy .focus\:border-black:focus {
+  border-color: var(--text-secondary) !important;
+  --tw-ring-color: var(--text-secondary) !important;
+}
+
+.theme-parchment input:focus,
+.theme-parchment textarea:focus,
+.theme-parchment select:focus,
+.theme-parchment .focus\:ring-black:focus,
+.theme-parchment .focus\:border-black:focus,
+.theme-eyecare input:focus,
+.theme-eyecare textarea:focus,
+.theme-eyecare select:focus,
+.theme-eyecare .focus\:ring-black:focus,
+.theme-eyecare .focus\:border-black:focus,
+.theme-apricot input:focus,
+.theme-apricot textarea:focus,
+.theme-apricot select:focus,
+.theme-apricot .focus\:ring-black:focus,
+.theme-apricot .focus\:border-black:focus {
+  border-color: var(--text-primary) !important;
+  --tw-ring-color: var(--text-primary) !important;
+}
+
+/* Dark and navy theme status badges (green / amber) */
+.theme-dark .bg-emerald-50,
+.theme-navy .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.theme-dark .text-emerald-700,
+.theme-navy .text-emerald-700 {
+  color: #34d399 !important;
+}
+
+.theme-dark .bg-amber-50,
+.theme-navy .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.theme-dark .bg-amber-50\/60,
+.theme-navy .bg-amber-50\/60 {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+}
+
+.theme-dark .text-amber-700,
+.theme-navy .text-amber-700,
+.theme-dark .text-amber-800,
+.theme-navy .text-amber-800 {
+  color: #fbbf24 !important;
+}
+
+.theme-dark .group:hover .group-hover\:text-amber-800,
+.theme-navy .group:hover .group-hover\:text-amber-800 {
+  color: #fbbf24 !important;
+}
+
+/* Active buttons and pill highlights in dark themes */
+.theme-dark .bg-zinc-900:not(.keep-black),
+.theme-navy .bg-zinc-900:not(.keep-black) {
+  background-color: var(--btn-primary-bg) !important;
+  color: var(--btn-primary-text) !important;
+}
+
+.theme-dark .border-zinc-900:not(.keep-black),
+.theme-navy .border-zinc-900:not(.keep-black) {
+  border-color: var(--border-color) !important;
+}
+
+.theme-dark .bg-zinc-800:not(.keep-black),
+.theme-navy .bg-zinc-800:not(.keep-black) {
+  background-color: var(--bg-subtle-hover) !important;
+  color: var(--text-primary) !important;
+}
+
 /* Chapter drawer theme adaptive active item and badge */
 .chapter-item-current {
   background-color: var(--bg-subtle) !important;
@@ -378,6 +700,99 @@ html.theme-apricot body {
 .chapter-badge-current {
   background-color: var(--btn-primary-bg) !important;
   color: var(--btn-primary-text) !important;
+}
+
+/* Segmented Tabs (ChapterDrawer & Bookshelf dual tab control) */
+.segmented-tab-track {
+  background-color: var(--bg-subtle) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+.segmented-tab-btn {
+  color: var(--text-secondary) !important;
+}
+
+.segmented-tab-btn:hover {
+  color: var(--text-primary) !important;
+  background-color: var(--bg-subtle-hover) !important;
+}
+
+.segmented-tab-btn-active {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.segmented-tab-badge {
+  background-color: var(--btn-primary-bg) !important;
+  color: var(--btn-primary-text) !important;
+}
+
+.segmented-tab-badge-inactive {
+  background-color: var(--bg-subtle-hover) !important;
+  color: var(--text-muted) !important;
+}
+
+/* Dark and Navy Themes: High contrast, dark track, crisp active tab */
+.theme-dark .segmented-tab-track,
+.theme-navy .segmented-tab-track {
+  background-color: rgba(0, 0, 0, 0.45) !important;
+  border-color: var(--border-color) !important;
+}
+
+.theme-dark .segmented-tab-btn,
+.theme-navy .segmented-tab-btn {
+  color: var(--text-secondary) !important;
+}
+
+.theme-dark .segmented-tab-btn:hover,
+.theme-navy .segmented-tab-btn:hover {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.theme-dark .segmented-tab-btn-active,
+.theme-navy .segmented-tab-btn-active {
+  background-color: var(--bg-card-hover) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
+.theme-dark .segmented-tab-badge,
+.theme-navy .segmented-tab-badge {
+  background-color: var(--btn-primary-bg) !important;
+  color: var(--btn-primary-text) !important;
+}
+
+.theme-dark .segmented-tab-badge-inactive,
+.theme-navy .segmented-tab-badge-inactive {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--text-muted) !important;
+}
+
+/* Search keyword highlight: strictly follows theme variables */
+.highlight-search-kw {
+  background-color: var(--bg-subtle-hover) !important;
+  color: var(--text-primary) !important;
+  font-weight: 600;
+  border-radius: 0.25rem;
+  padding: 0.05rem 0.25rem;
+}
+
+/* Book cover placeholder: strictly follows theme variables */
+.book-cover-placeholder {
+  background-color: var(--bg-subtle) !important;
+}
+
+.book-cover-placeholder-spine {
+  fill: var(--border-color) !important;
+  opacity: 0.6;
+}
+
+.book-cover-placeholder-text {
+  fill: var(--text-primary) !important;
+  opacity: 0.45;
 }
 
 /* Typography styles for novel reader content */

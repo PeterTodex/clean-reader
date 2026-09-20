@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BookDetail } from '@/sources/types';
 import { storage } from '@/lib/storage';
+import { Modal } from './Modal';
 import {
   X,
   Download,
@@ -269,14 +270,14 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
         );
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
-      onClick={handleClose}
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      maxWidth="md"
+      position="responsive-bottom"
+      showCloseButton={false}
+      className="rounded-t-2xl sm:rounded-2xl border-stone-200 text-stone-800"
     >
-      <div
-        className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-stone-200 text-stone-800 overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 bg-zinc-50/50">
           <div className="flex items-center gap-2.5">
@@ -366,7 +367,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                           max={totalChapters}
                           value={startChapter}
                           onChange={(e) => setStartChapter(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="w-full pl-7 pr-7 py-1.5 text-sm bg-white border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-black"
+                          className="w-full pl-7 pr-7 py-1.5 text-sm bg-white border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:border-zinc-400"
                         />
                         <span className="absolute right-2.5 top-2 text-xs text-stone-400">章</span>
                       </div>
@@ -386,7 +387,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                           onChange={(e) =>
                             setEndChapter(Math.min(totalChapters, parseInt(e.target.value) || totalChapters))
                           }
-                          className="w-full pl-7 pr-7 py-1.5 text-sm bg-white border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-black"
+                          className="w-full pl-7 pr-7 py-1.5 text-sm bg-white border border-zinc-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:border-zinc-400"
                         />
                         <span className="absolute right-2.5 top-2 text-xs text-stone-400">章</span>
                       </div>
@@ -555,7 +556,6 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };

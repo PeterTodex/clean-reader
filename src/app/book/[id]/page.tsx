@@ -320,7 +320,7 @@ export default function BookDetailPage() {
                       placeholder="搜索章节名或序号..."
                       value={chapterSearch}
                       onChange={(e) => setChapterSearch(e.target.value)}
-                      className="w-full pl-9 pr-3 py-1.5 text-xs bg-zinc-100 rounded-lg border border-zinc-200 focus:outline-none focus:ring-1 focus:ring-black focus:bg-white text-zinc-900 placeholder-zinc-400 transition-all"
+                      className="w-full pl-9 pr-3 py-1.5 text-xs bg-zinc-100 rounded-lg border border-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:border-zinc-400 text-zinc-900 placeholder-zinc-400 transition-all"
                     />
                   </div>
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { SourceMeta } from '@/sources/types';
-import { ArrowLeft, Server, ExternalLink, HardDrive, Sparkles } from 'lucide-react';
+import { ArrowLeft, Server, ExternalLink, HardDrive } from 'lucide-react';
 
 interface CacheStats {
   entries: number;
@@ -167,19 +167,6 @@ export default function SourcesPage() {
               </div>
             </section>
 
-            {/* Extensibility note */}
-            <div className="bg-zinc-100 rounded-xl p-6 border border-zinc-200 space-y-3 font-mono text-xs">
-              <h3 className="font-bold text-zinc-950 text-xs flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-black" />
-                新增书源
-              </h3>
-              <p className="text-zinc-600 leading-relaxed">
-                书源是插件：往 <code>src/sources/plugins/</code> 放一个
-                <code className="mx-1">export default</code>
-                一个 <code>BookSource</code> 实例的文件，重新构建即可生效，无需改动其他代码。配置驱动的书源还可以直接用
-                <code className="mx-1">RuleBasedSource</code> 一行构造。
-              </p>
-            </div>
           </>
         )}
       </main>

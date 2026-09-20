@@ -121,20 +121,22 @@ function BookshelfContent() {
             </Link>
 
             {/* Segmented Tab Controls */}
-            <div className="flex items-center gap-1 p-1 bg-zinc-100 rounded-xl border border-zinc-200/80 text-xs font-medium">
+            <div className="segmented-tab-track flex items-center gap-1 p-1 rounded-xl text-xs font-medium">
               <button
                 type="button"
                 onClick={() => handleTabSwitch('shelf')}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                className={`segmented-tab-btn px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
                   activeTab === 'shelf'
-                    ? 'bg-white text-zinc-950 font-bold shadow-xs'
-                    : 'text-zinc-600 hover:text-zinc-900'
+                    ? 'segmented-tab-btn-active font-bold'
+                    : ''
                 }`}
               >
                 <Library className="w-3.5 h-3.5" />
                 <span>我的藏书</span>
                 {shelfItems.length > 0 && (
-                  <span className="font-mono text-[10px] bg-zinc-900 text-white px-1.5 py-0.2 rounded-full leading-tight">
+                  <span className={`font-mono text-[10px] px-1.5 py-0.2 rounded-full leading-tight ${
+                    activeTab === 'shelf' ? 'segmented-tab-badge' : 'segmented-tab-badge-inactive'
+                  }`}>
                     {shelfItems.length}
                   </span>
                 )}
@@ -143,16 +145,18 @@ function BookshelfContent() {
               <button
                 type="button"
                 onClick={() => handleTabSwitch('history')}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                className={`segmented-tab-btn px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
                   activeTab === 'history'
-                    ? 'bg-white text-zinc-950 font-bold shadow-xs'
-                    : 'text-zinc-600 hover:text-zinc-900'
+                    ? 'segmented-tab-btn-active font-bold'
+                    : ''
                 }`}
               >
                 <Clock className="w-3.5 h-3.5" />
                 <span>阅读足迹</span>
                 {historyItems.length > 0 && (
-                  <span className="font-mono text-[10px] bg-zinc-200 text-zinc-700 px-1.5 py-0.2 rounded-full leading-tight">
+                  <span className={`font-mono text-[10px] px-1.5 py-0.2 rounded-full leading-tight ${
+                    activeTab === 'history' ? 'segmented-tab-badge' : 'segmented-tab-badge-inactive'
+                  }`}>
                     {historyItems.length}
                   </span>
                 )}

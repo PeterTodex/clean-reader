@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { SearchResult, SourceMeta } from '@/sources/types';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
+import { Modal } from './Modal';
 import { Search, X, Flame, RefreshCw, BookOpen, Loader2 } from 'lucide-react';
 
 const HOT_KEYWORDS = ['重生', '穿越', '综漫', '都市', '武侠', '系统', '反派', '仙侠'];
@@ -73,18 +74,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     }
   }, [isOpen]);
 
-  // Close on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
 
   const handleSearch = async (queryToSearch?: string) => {
     const q = (queryToSearch !== undefined ? queryToSearch : keyword).trim();
@@ -180,18 +170,18 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-6 md:pt-16 bg-black/60 backdrop-blur-xs"
-      onClick={onClose}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      position="top"
+      maxWidth="2xl"
+      showCloseButton={false}
+      className="rounded-2xl max-h-[88vh]"
     >
-      <div
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-zinc-200 overflow-hidden flex flex-col max-h-[88vh] animate-in fade-in zoom-in-95 duration-150"
-        onClick={(e) => e.stopPropagation()}
-      >
         {/* Top Search Bar */}
         <div className="p-3.5 sm:p-4 border-b border-zinc-200 bg-white flex items-center gap-2">
           <form onSubmit={handleSubmit} className="flex-1 flex items-center gap-2">
-            <div className="relative flex-1 flex items-center bg-zinc-100 rounded-xl px-3 py-2 border border-zinc-200/80 focus-within:border-zinc-400 focus-within:ring-1 focus-within:ring-zinc-400/30 focus-within:bg-white transition-all">
+            <div className="relative flex-1 flex items-center bg-zinc-100 rounded-xl px-3 py-2 border border-zinc-200/80 focus-within:border-zinc-400 focus-within:ring-1 focus-within:ring-zinc-400/30 transition-all">
               <Search className="w-4 h-4 text-zinc-400 shrink-0 mr-2" />
               <input
                 ref={inputRef}
@@ -227,7 +217,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         </div>
 
         {/* Hot Keyword Tags */}
-        <div className="px-4 py-2.5 bg-zinc-50/70 border-b border-zinc-100 flex items-center gap-2 overflow-x-auto scrollbar-none">
+        <div className="px-4 py-2.5 bg-zinc-50 border-b border-zinc-100 flex items-center gap-2 overflow-x-auto scrollbar-none">
           <span className="text-[11px] text-zinc-400 font-mono flex items-center gap-1 shrink-0">
             <Flame className="w-3 h-3 text-amber-600" />
             热搜：
@@ -264,7 +254,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono px-1">
                   <span>找到 {searchResults.length} 本相关作品</span>
                   {isSearching && (
-                    <span className="flex items-center gap-1.5 text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60">
+                    <span className="flex items-center gap-1.5 text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full border border-zinc-200">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       <span>正在检索更多书源 ({completedCount}/{totalCount})...</span>
                     </span>
@@ -278,7 +268,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       key={`${book.sourceId}-${book.id}`}
                       href={`/book/${book.id}?source=${book.sourceId}`}
                       onClick={onClose}
-                      className="flex gap-3.5 p-3 rounded-xl bg-zinc-50/60 hover:bg-zinc-100 border border-zinc-200/70 hover:border-zinc-300 transition-all group"
+                      className="flex gap-3.5 p-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 hover:border-zinc-300 transition-all group"
                     >
                       <div className="w-14 aspect-[4/5] bg-zinc-100 rounded-md overflow-hidden shrink-0 relative border border-zinc-200">
                         <BookCoverPlaceholder title={book.title} className="absolute inset-0" />
@@ -296,7 +286,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                         <div>
                           <div className="flex items-center justify-between gap-2">
-                            <h4 className="font-medium text-zinc-900 text-xs sm:text-sm group-hover:text-amber-800 transition-colors line-clamp-1">
+                            <h4 className="font-medium text-zinc-900 text-xs sm:text-sm group-hover:opacity-75 transition-opacity line-clamp-1">
                               {book.title}
                             </h4>
                             {sourceName && (
@@ -338,7 +328,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };

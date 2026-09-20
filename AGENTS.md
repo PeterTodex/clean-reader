@@ -152,12 +152,14 @@ export const isDefault = true;
 
 不要基于以下内容开发，也不要假设它们可用：`readingMode: 'page'` 可在设置弹窗中选择，但除该弹窗外无人读取 —— 没有任何逻辑消费它来改变渲染，因此实际只存在纵向滚动；`animate-fade-in` 被各弹窗使用，但项目中并未定义任何关键帧；上文提到的 `dark:` 变体；以及 `STORAGE_KEYS.ACTIVE_SOURCE`。
 
-## 约定
+## 约定与基础组件
 
-- **没有 `cn()` 辅助函数。** `clsx` 与 `tailwind-merge` 虽在依赖中，但在任何地方都未被引入 —— 类名一律用模板字符串配合三元表达式拼接。
+- **类名合并工具 `cn()`**：位于 `src/lib/utils.ts`，基于已安装的 `clsx` 与 `tailwind-merge` 实现。推荐在组件条件样式与变体拼接中优先使用 `cn()`。
+- **共享弹窗与抽屉基础组件**：
+  - `Modal`（`src/components/Modal.tsx`）：全站统一的居中/响应式底部弹窗，内置了统一遮罩、Escape 键退出、Body 滚动锁定、点击背景关闭、主题适配与标题/关闭按钮封装。已接入 `ReaderSettingsModal`、`BookDownloaderModal`、`SearchModal`。
+  - `Drawer`（`src/components/Drawer.tsx`）：全站统一的侧边抽屉（支持 `left` / `right` / `bottom`），内置遮罩、滚动锁定与动画。已接入 `ChapterDrawer`（左侧目录/书签）、`BookContentSearchModal`（右侧正文检索）。
 - 图标一律来自 `lucide-react` 的具名导入。
-- Tailwind 工具类内联使用，没有 CSS Modules。强调色为 `amber-800`，配以 `stone` 中性色系，标题使用 `font-serif`。页面背景色 `#faf8f5` 是逐页硬编码的，并未参与主题化。
-- **没有共享的弹窗基础组件** —— `ReaderSettingsModal`、`BookmarkModal`、`BookDownloaderModal` 与 `ChapterDrawer` 各自重复实现了同一套 `isOpen` prop + `fixed inset-0 z-50` 遮罩 + 移动端底部抽屉的写法。
+- Tailwind 工具类内联使用，没有 CSS Modules。标题使用 `font-serif`。
 - 错误提示与破坏性操作确认使用原生 `alert()` / `confirm()`，而非 toast。
 - 图片一律使用原生 `<img>` 配 `onError` 处理，从不使用 `next/image`（`next.config.mjs` 中设置了 `images.unoptimized`）。
 
