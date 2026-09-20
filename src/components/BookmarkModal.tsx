@@ -26,8 +26,6 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({
   onSelectBookmark,
 }) => {
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
-  const [customNote, setCustomNote] = useState('');
-  const [showAddNote, setShowAddNote] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
 
   // Load bookmarks on open
@@ -35,8 +33,6 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({
     if (isOpen) {
       setBookmarks(storage.getBookmarks(bookId));
       setJustAdded(false);
-      setCustomNote('');
-      setShowAddNote(false);
     }
   }, [isOpen, bookId]);
 
@@ -51,15 +47,13 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({
       sourceId,
       chapterId: currentChapterId,
       chapterTitle: currentChapterTitle,
-      excerpt: customNote.trim() || currentExcerpt.trim() || '书签标记位置',
+      excerpt: currentExcerpt.trim() || '书签标记位置',
       createTime: Date.now(),
     };
 
     storage.addBookmark(newBookmark);
     setBookmarks(storage.getBookmarks(bookId));
     setJustAdded(true);
-    setCustomNote('');
-    setShowAddNote(false);
 
     setTimeout(() => {
       setJustAdded(false);
@@ -82,7 +76,7 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({
         <div className="p-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
           <h3 className="font-bold text-base text-zinc-950 flex items-center gap-2">
             <Bookmark className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />
-            书签与批注管理
+            书签
             <span className="text-xs font-mono font-normal text-zinc-400">（共 {bookmarks.length} 条）</span>
           </h3>
           <button
@@ -99,6 +93,9 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({
             <div className="min-w-0 flex-1">
               <div className="text-[11px] font-mono text-zinc-400 font-medium">当前章节</div>
               <div className="text-xs font-bold text-zinc-900 truncate mt-0.5">{currentChapterTitle}</div>
+              {currentExcerpt && (
+                <div className="text-[11px] text-zinc-500 truncate mt-1 italic">“{currentExcerpt}”</div>
+              )}
             </div>
             <button
               onClick={handleAddCurrentBookmark}
@@ -126,31 +123,6 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({
               )}
             </button>
           </div>
-
-          {/* Optional custom note toggle */}
-          <div className="mt-2.5 flex items-center justify-between text-xs text-zinc-500">
-            <button
-              onClick={() => setShowAddNote(!showAddNote)}
-              className="text-zinc-900 font-medium hover:underline text-[11px]"
-            >
-              {showAddNote ? '取消自定义备注' : '+ 填写批注/笔记'}
-            </button>
-            {currentExcerpt && !showAddNote && (
-              <span className="truncate max-w-[240px] italic text-zinc-400 text-[11px]">“{currentExcerpt}”</span>
-            )}
-          </div>
-
-          {showAddNote && (
-            <div className="mt-2">
-              <textarea
-                value={customNote}
-                onChange={(e) => setCustomNote(e.target.value)}
-                placeholder="输入个性化备注或摘录心得..."
-                rows={2}
-                className="w-full text-xs p-2 rounded-lg border border-zinc-300 bg-white text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-black"
-              />
-            </div>
-          )}
         </div>
 
         {/* Bookmarks List */}

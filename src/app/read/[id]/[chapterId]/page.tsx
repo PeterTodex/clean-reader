@@ -3,13 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { ReaderView } from '@/components/ReaderView';
+import { ReaderSkeleton } from '@/components/ReaderSkeleton';
 import { ChapterContent, ChapterItem, BookDetail } from '@/sources/types';
+import { storage } from '@/lib/storage';
+import { clientChapterCache, clientBookCache } from '@/lib/client-cache';
 import Link from 'next/link';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
-
-// In-memory module cache for instant transitions across navigation
-const clientChapterCache = new Map<string, ChapterContent>();
-const clientBookCache = new Map<string, BookDetail>();
 
 export default function ReaderPage() {
   const params = useParams();
@@ -26,6 +25,21 @@ export default function ReaderPage() {
   const [book, setBook] = useState<BookDetail | null>(() => clientBookCache.get(bookKey) || null);
   const [loading, setLoading] = useState(!clientChapterCache.has(chapterKey));
   const [error, setError] = useState<string | null>(null);
+  const [slowLoading, setSlowLoading] = useState(false);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (loading && !chapter) {
+      timer = setTimeout(() => {
+        setSlowLoading(true);
+      }, 3500);
+    } else {
+      setSlowLoading(false);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [loading, chapter]);
 
   useEffect(() => {
     if (!bookId || !chapterId) return;
@@ -87,13 +101,28 @@ export default function ReaderPage() {
       });
   }, [bookId, chapterId, sourceId, chapterKey, bookKey, chapter, book]);
 
+  // Resolve known book/chapter title for immediate skeleton display
+  const cachedBook = book || clientBookCache.get(bookKey);
+  const displayBookTitle =
+    cachedBook?.title ||
+    storage.getBookshelf().find((b) => b.id === bookId)?.title ||
+    storage.getHistory().find((h) => h.id === bookId)?.title ||
+    '书籍阅读';
+
+  const displayChapterTitle =
+    cachedBook?.chapters.find((c) => String(c.id) === String(chapterId))?.title ||
+    storage.getHistory().find((h) => h.id === bookId && String(h.lastChapterId) === String(chapterId))?.lastChapterTitle ||
+    '';
+
   if (loading && !chapter) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-zinc-800">
-        <div className="w-9 h-9 border-2 border-black border-t-transparent rounded-full animate-spin mb-3" />
-        <h3 className="font-bold text-sm mb-1 tracking-tight">正在净化排版并加载正文...</h3>
-        <p className="text-xs text-zinc-400 font-mono">无广告过滤 · 章节智能拼接</p>
-      </div>
+      <ReaderSkeleton
+        bookId={bookId}
+        sourceId={sourceId}
+        bookTitle={displayBookTitle}
+        chapterTitle={displayChapterTitle}
+        slowLoading={slowLoading}
+      />
     );
   }
 

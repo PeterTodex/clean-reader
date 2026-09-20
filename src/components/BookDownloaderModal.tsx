@@ -12,7 +12,6 @@ import {
   BookOpen,
   Layers,
   FileText,
-  Sparkles,
   Loader2,
 } from 'lucide-react';
 
@@ -424,19 +423,6 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                 </div>
               )}
 
-              {/* Format features badges */}
-              <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 text-xs text-zinc-600 space-y-1">
-                <div className="flex items-center gap-1.5 font-medium text-zinc-900 mb-1">
-                  <Sparkles className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100" />
-                  TXT 格式化特性
-                </div>
-                <div className="grid grid-cols-2 gap-1 text-[11px] text-zinc-500 font-mono">
-                  <div>✓ 智能多线路并发解析</div>
-                  <div>✓ 深度过滤防屏蔽广告</div>
-                  <div>✓ 标准小说段落两字缩进</div>
-                  <div>✓ 规范章节标题标准化</div>
-                </div>
-              </div>
 
               {/* Action Trigger Button */}
               <button
@@ -457,10 +443,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                 <div className="w-10 h-10 mx-auto rounded-full bg-black flex items-center justify-center text-white mb-3">
                   <Loader2 className="w-5 h-5 animate-spin" />
                 </div>
-                <h4 className="font-bold text-sm text-zinc-950">正在下载与排版章节...</h4>
-                <p className="text-xs text-zinc-500 font-mono">
-                  正在解析章节并过滤广告
-                </p>
+                <h4 className="font-bold text-sm text-zinc-950">正在下载章节...</h4>
               </div>
 
               {/* Progress bar and counter */}

@@ -8,8 +8,8 @@ import { BookDownloaderModal } from '@/components/BookDownloaderModal';
 import { BookCoverPlaceholder } from '@/components/BookCoverPlaceholder';
 import { BookDetail, ChapterItem } from '@/sources/types';
 import { storage } from '@/lib/storage';
+import { clientBookCache } from '@/lib/client-cache';
 import {
-  ArrowLeft,
   BookOpen,
   Bookmark,
   Check,
@@ -79,6 +79,7 @@ export default function BookDetailPage() {
       .then((data) => {
         if (data.success && data.data) {
           setBook(data.data);
+          clientBookCache.set(`${sourceId}::${bookId}`, data.data);
           if (Array.isArray(data.data.cachedChapterIds)) {
             setCachedChapterIds(new Set(data.data.cachedChapterIds));
           }
@@ -180,14 +181,6 @@ export default function BookDetailPage() {
       <Header />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 space-y-8">
-        {/* Back Link */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-500 hover:text-black transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          返回首页
-        </Link>
 
         {loading ? (
           <div className="py-24 text-center">
@@ -257,9 +250,9 @@ export default function BookDetailPage() {
 
                 {/* Synopsis */}
                 {book.intro && (
-                  <div className="bg-zinc-50 p-3.5 rounded-lg border border-zinc-200 text-xs sm:text-sm text-zinc-600 leading-relaxed max-h-32 overflow-y-auto whitespace-pre-wrap">
+                  <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed whitespace-pre-wrap">
                     {book.intro}
-                  </div>
+                  </p>
                 )}
 
                 {/* Action Buttons */}
@@ -307,27 +300,27 @@ export default function BookDetailPage() {
             </div>
 
             {/* Chapter List Card */}
-            <div className="bg-white rounded-xl p-6 sm:p-8 border border-zinc-200 shadow-sm space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
-                <div>
-                  <h2 className="font-bold text-base text-zinc-950 flex items-center gap-2">
-                    <Bookmark className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />
-                    正文章节目录
-                    <span className="text-xs font-mono font-normal text-zinc-400">
-                      （共 {book.chapters.length} 章{cachedChapterIds.size > 0 ? ` · 已缓存 ${cachedChapterIds.size} 章` : ''}）
-                    </span>
-                  </h2>
+            <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-zinc-100 bg-zinc-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Bookmark className="w-4 h-4 text-zinc-900 dark:text-zinc-100 shrink-0" />
+                  <h2 className="font-bold text-base text-zinc-950 shrink-0">目录</h2>
+                  <span className="text-xs font-mono font-normal text-zinc-400 truncate">
+                    {cachedChapterIds.size > 0
+                      ? `（已缓存 ${cachedChapterIds.size}/${book.chapters.length}）`
+                      : `（共 ${book.chapters.length} 章）`}
+                  </span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1 sm:w-60">
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <div className="relative flex-1 sm:w-56">
                     <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-2.5" />
                     <input
                       type="text"
-                      placeholder="搜索章节..."
+                      placeholder="搜索章节名或序号..."
                       value={chapterSearch}
                       onChange={(e) => setChapterSearch(e.target.value)}
-                      className="w-full pl-9 pr-3 py-1.5 text-xs bg-zinc-100 rounded-lg border border-zinc-200 focus:outline-none focus:ring-1 focus:ring-black text-zinc-900"
+                      className="w-full pl-9 pr-3 py-1.5 text-xs bg-zinc-100 rounded-lg border border-zinc-200 focus:outline-none focus:ring-1 focus:ring-black focus:bg-white text-zinc-900 placeholder-zinc-400 transition-all"
                     />
                   </div>
 
@@ -348,7 +341,7 @@ export default function BookDetailPage() {
                   ) : (
                     <button
                       onClick={() => setShowCacheConfirm(true)}
-                      className="px-2.5 py-1.5 text-xs rounded-lg flex items-center gap-1.5 border font-mono text-zinc-700 bg-zinc-100 hover:bg-zinc-200 hover:text-black border-zinc-200 transition-colors shrink-0"
+                      className="px-2.5 py-1.5 text-xs rounded-lg flex items-center gap-1.5 border font-mono text-zinc-700 bg-white hover:bg-zinc-100 hover:text-black border-zinc-200 transition-colors shrink-0"
                       title="在后台将所有未缓存章节下载到本地"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -358,7 +351,8 @@ export default function BookDetailPage() {
 
                   <button
                     onClick={() => setIsReverse(!isReverse)}
-                    className="px-3 py-1.5 text-xs text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg flex items-center gap-1 transition-colors flex-shrink-0 border border-zinc-200 font-mono"
+                    className="px-2.5 py-1.5 text-xs text-zinc-700 bg-white hover:bg-zinc-100 border border-zinc-200 rounded-lg flex items-center gap-1 transition-colors flex-shrink-0 font-mono"
+                    title="切换正序/倒序"
                   >
                     <ArrowUpDown className="w-3.5 h-3.5" />
                     {isReverse ? '倒序' : '正序'}
@@ -366,37 +360,43 @@ export default function BookDetailPage() {
                 </div>
               </div>
 
-              {/* Chapters Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-[600px] overflow-y-auto pr-1">
-                {filteredChapters.map((ch) => {
-                  const isLastRead = ch.id === lastReadChapterId;
-                  const isCached = cachedChapterIds.has(ch.id);
-                  return (
-                    <Link
-                      key={ch.id}
-                      href={`/read/${book.id}/${ch.id}?source=${sourceId}`}
-                      className={`p-2.5 rounded-lg text-xs transition-colors flex items-center justify-between border ${
-                        isLastRead
-                          ? 'border-black bg-zinc-100 font-bold text-black shadow-sm'
-                          : 'border-transparent hover:border-zinc-200 hover:bg-zinc-50 text-zinc-700'
-                      }`}
-                    >
-                      <span className="line-clamp-1 flex-1 pr-2">{ch.title}</span>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {isCached && (
-                          <span title="已缓存" className="text-emerald-600 flex items-center">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          </span>
-                        )}
-                        {isLastRead && (
-                          <span className="text-[10px] bg-black text-white px-1.5 py-0.5 rounded font-mono font-normal flex-shrink-0">
-                            最近
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
+              {/* Chapters List */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-h-[600px] overflow-y-auto">
+                {filteredChapters.length === 0 ? (
+                  <div className="col-span-full py-12 text-center text-xs text-zinc-400">
+                    没有匹配到相关章节
+                  </div>
+                ) : (
+                  filteredChapters.map((ch) => {
+                    const isLastRead = ch.id === lastReadChapterId;
+                    const isCached = cachedChapterIds.has(ch.id);
+                    return (
+                      <Link
+                        key={ch.id}
+                        href={`/read/${book.id}/${ch.id}?source=${sourceId}`}
+                        className={`flex items-center justify-between px-4 py-3 text-xs transition-colors border-b border-zinc-100 ${
+                          isLastRead
+                            ? 'chapter-item-current bg-zinc-100 text-zinc-950 font-bold border-l-4 border-zinc-900'
+                            : 'text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950'
+                        }`}
+                      >
+                        <span className="line-clamp-1 flex-1 pr-2">{ch.title}</span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {isLastRead && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium flex-shrink-0 chapter-badge-current bg-black text-white">
+                              最近
+                            </span>
+                          )}
+                          {isCached && (
+                            <span title="已缓存" className="text-emerald-600 flex items-center">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })
+                )}
               </div>
             </div>
 

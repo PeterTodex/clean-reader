@@ -18,6 +18,14 @@ npx tsc --noEmit      # 类型检查；package.json 中没有 typecheck 脚本
 
 `pnpm lint` 绑定的是 `next lint`，但仓库中未提交任何 ESLint 配置（`.eslintrc*` / `eslint.config.*`），首次运行时会提示创建配置，而不是直接执行检查。
 
+### 严禁在日常修改后执行 pnpm build（防止破坏 dev 热重载）
+
+- **开发态热重载机制**：用户在本地终端通常长期运行 `pnpm dev`。Next.js 的 `pnpm dev` 与 `pnpm build` **共享同一个 `.next/` 目录**。
+- **冲突影响**：助手在修改前端组件、页面或样式后若在后台执行 `pnpm build`（或清除 `.next/` 目录），会直接覆盖改写开发环境的内存映射和 HMR（Hot Module Replacement）热更新缓存，导致用户浏览器端失去样式与组件的自动热重载能力、甚至抛出 chunk 404，迫使用户每次都必须重启 `pnpm dev`。
+- **严格验证准则**：
+  - **日常开发、UI 组件、页面与样式修改**：验证代码语法与类型安全**仅允许使用 `npx tsc --noEmit`**，严禁在后台执行 `pnpm build`！
+  - **何时才可执行 `pnpm build`**：仅在用户明确要求全量打包验证、部署发布前终验、或者新增/删除了书源插件（验证 `GET /api/sources` 静态预渲染固化）且用户知晓需重启 dev server 时，才可执行。
+
 ## 项目定位
 
 清阅 / CleanReader —— 一个 Next.js 14 App Router 应用，抓取中文网络小说站点，剥除其广告与反爬干扰，再以无广告的阅读界面重新渲染章节。所有面向用户的文案均为中文（`<html lang="zh-CN">`，见 `src/app/layout.tsx`）；所有代码注释、`console` 输出以及适配器抛出的错误信息均为英文。项目未引入任何 i18n 框架，界面文案直接内联。

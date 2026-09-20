@@ -16,8 +16,6 @@ import {
   ChevronRight,
   List,
   SlidersHorizontal,
-  Maximize,
-  Minimize,
   BookOpen,
   Bookmark,
   Headphones,
@@ -53,7 +51,6 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const [showTts, setShowTts] = useState(false);
   const [ttsParagraphIndex, setTtsParagraphIndex] = useState(0);
   const [showControls, setShowControls] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [switchingChapter, setSwitchingChapter] = useState<{ id: string; title: string } | null>(null);
   const [readingProgress, setReadingProgress] = useState(0);
@@ -300,12 +297,12 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     }
   }, [chapter.nextChapterId, navigateToChapter]);
 
-  // Fullscreen toggle
+  // Fullscreen toggle (keyboard 'f')
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      document.documentElement.requestFullscreen().catch(() => {});
     } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+      document.exitFullscreen().catch(() => {});
     }
   };
 
@@ -459,7 +456,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
         } ${themeClass}`}
       >
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 h-[52px] flex items-center justify-between">
           <Link
             href={`/book/${chapter.bookId}?source=${sourceId}`}
             className="flex items-center gap-1.5 text-sm font-medium hover:opacity-75 transition-opacity"
@@ -501,13 +498,6 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             >
               <SlidersHorizontal className="w-5 h-5" />
             </button>
-            <button
-              onClick={toggleFullscreen}
-              className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors hidden sm:inline-flex"
-              title={isFullscreen ? '退出全屏' : '全屏阅读'}
-            >
-              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-            </button>
           </div>
         </div>
       </header>
@@ -516,9 +506,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       <main
         ref={containerRef}
         onClick={handleContentClick}
-        className="mx-auto px-5 sm:px-8 pt-20 pb-32 cursor-pointer select-text"
+        className="w-full px-5 sm:px-8 pt-20 pb-32 cursor-pointer select-text"
         style={{
-          maxWidth: `${settings.maxWidth}px`,
           fontSize: `${settings.fontSize}px`,
           lineHeight: settings.lineHeight,
           fontFamily: getFontFamilyStyle(),
@@ -568,11 +557,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             <section key={ch.id} id={`chapter-section-${ch.id}`} className={chIdx === 0 ? 'animate-fade-in' : ''}>
               {chIdx > 0 ? (
                 /* Divider between continuous chapters */
-                <div className="my-16 pt-8 pb-10 border-t reader-border text-center select-none">
-                  <div className="text-xs opacity-35 font-mono tracking-widest mb-6">
-                    —— 本章完 ——
-                  </div>
-                  <h2 className="text-2xl sm:text-3xl font-bold font-serif tracking-tight pt-2 text-center">
+                <div className="my-8 pt-6 pb-2 border-t reader-border text-center select-none">
+                  <h2 className="text-2xl sm:text-3xl font-bold font-serif tracking-tight text-center">
                     {ch.title}
                   </h2>
                 </div>
@@ -639,7 +625,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
         } ${themeClass}`}
       >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-12 flex items-center justify-between text-xs">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-[52px] flex items-center justify-between text-xs">
           {/* 上一章（纯文字） */}
           <button
             disabled={!currentPrevChapterId || isLoading}

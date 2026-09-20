@@ -29,8 +29,8 @@ export interface ReaderSettings {
   fontSize: number;
   lineHeight: number;
   fontFamily: 'serif' | 'sans' | 'kaiti';
-  maxWidth: number;
-  readingMode: 'scroll' | 'page';
+  maxWidth?: number;
+  readingMode?: 'scroll' | 'page';
   autoPreloadNext: boolean;
 }
 
@@ -39,8 +39,6 @@ export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   fontSize: 16,
   lineHeight: 1.85,
   fontFamily: 'serif',
-  maxWidth: 820,
-  readingMode: 'scroll',
   autoPreloadNext: true,
 };
 
