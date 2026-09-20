@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
+import { sharedHttpsAgent } from '@/lib/request';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -11,13 +12,22 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    let hostname = '';
+    try {
+      hostname = new URL(imageUrl).hostname;
+    } catch {}
+
     const response = await axios({
       method: 'GET',
       url: imageUrl,
       responseType: 'arraybuffer',
-      timeout: 8000,
+      timeout: 10000,
+      httpsAgent: sharedHttpsAgent,
+      proxy: false,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        ...(hostname ? { Host: hostname } : {}),
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         ...(referer ? { Referer: referer } : {}),
       },
     });

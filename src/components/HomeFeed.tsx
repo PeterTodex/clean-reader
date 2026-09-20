@@ -49,7 +49,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
     if (id.includes('hot')) return <Flame className="w-5 h-5 text-amber-600" />;
     if (id.includes('rank') || type === 'ranking') return <Trophy className="w-5 h-5 text-amber-600" />;
     if (id.includes('cat') || type === 'tabs') return <Layers className="w-5 h-5 text-zinc-700" />;
-    if (id.includes('new')) return <Sparkles className="w-5 h-5 text-amber-600" />;
+    if (id.includes('new') || id.includes('featured')) return <Sparkles className="w-5 h-5 text-amber-600" />;
     return <Clock className="w-5 h-5 text-zinc-600" />;
   };
 
@@ -58,6 +58,8 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
       {sections.map((section) => {
         // 1. Grid Type (e.g. 热门小说, 新书上架, 热门推荐, 最新小说)
         if (section.type === 'grid' && section.items && section.items.length > 0) {
+          const hasCovers = section.items.some((b) => !!b.cover);
+
           return (
             <section key={section.id} className="space-y-4">
               <div className="flex items-center justify-between border-b border-zinc-200/80 pb-3">
@@ -69,46 +71,93 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4">
-                {section.items.map((book) => (
-                  <Link
-                    key={book.id}
-                    href={`/book/${book.id}?source=${sourceId}`}
-                    className="group flex flex-col space-y-1.5 sm:space-y-2 p-1.5 sm:p-2 rounded-xl bg-white border border-zinc-200/70 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all"
-                  >
-                    <div className="w-full aspect-[4/5] rounded-lg overflow-hidden relative bg-zinc-100 shadow-inner">
-                      {book.cover ? (
-                        <img
-                          src={book.cover}
-                          alt={book.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                          onError={(e) => {
-                            // Fallback to placeholder on error
-                            e.currentTarget.style.display = 'none';
-                            e.currentTarget.parentElement?.querySelector('.cover-placeholder')?.classList.remove('hidden');
-                          }}
-                        />
-                      ) : null}
-                      <div className={`cover-placeholder w-full h-full ${book.cover ? 'hidden' : ''}`}>
-                        <BookCoverPlaceholder title={book.title} />
-                      </div>
-                    </div>
+              {!hasCovers ? (
+                /* Coverless Ranking-style List */
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
+                  {section.items.map((book, bIdx) => {
+                    const rankNum = book.rank || bIdx + 1;
+                    const rankBadgeClass =
+                      rankNum === 1
+                        ? 'bg-amber-500 text-white shadow-xs font-bold'
+                        : rankNum === 2
+                        ? 'bg-zinc-400 text-white font-bold'
+                        : rankNum === 3
+                        ? 'bg-amber-700/80 text-white font-bold'
+                        : 'bg-zinc-100 text-zinc-500 font-medium';
 
-                    <div className="flex-1 flex flex-col justify-between">
-                      <h3
-                        className="font-medium text-xs sm:text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:text-amber-800 transition-colors"
-                        title={book.title}
+                    return (
+                      <Link
+                        key={book.id}
+                        href={`/book/${book.id}?source=${sourceId}`}
+                        className="group flex items-center gap-3 p-3 rounded-xl bg-white border border-zinc-200/70 hover:border-zinc-300 hover:shadow-xs transition-all"
                       >
-                        {book.title}
-                      </h3>
-                      {book.author && (
-                        <p className="text-[10px] sm:text-[11px] text-zinc-500 truncate mt-0.5 sm:mt-1">{book.author}</p>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                        <span
+                          className={`w-6 h-6 flex items-center justify-center text-xs rounded-md shrink-0 font-mono ${rankBadgeClass}`}
+                        >
+                          {rankNum}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:text-amber-800 transition-colors">
+                            {book.title}
+                          </p>
+                          <div className="flex items-center gap-2 text-[11px] text-zinc-400 mt-0.5">
+                            {book.author && <span className="truncate">{book.author}</span>}
+                            {book.status && (
+                              <span className="truncate text-zinc-400 font-mono text-[10px]">
+                                {book.status}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* Visual Cover Grid */
+                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4">
+                  {section.items.map((book) => (
+                    <Link
+                      key={book.id}
+                      href={`/book/${book.id}?source=${sourceId}`}
+                      className="group flex flex-col space-y-1.5 sm:space-y-2 p-1.5 sm:p-2 rounded-xl bg-white border border-zinc-200/70 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all"
+                    >
+                      <div className="w-full aspect-[4/5] rounded-lg overflow-hidden relative bg-zinc-100 shadow-inner">
+                        {book.cover ? (
+                          <img
+                            src={book.cover}
+                            alt={book.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                            onError={(e) => {
+                              // Fallback to placeholder on error
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.parentElement?.querySelector('.cover-placeholder')?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={`cover-placeholder w-full h-full ${book.cover ? 'hidden' : ''}`}>
+                          <BookCoverPlaceholder title={book.title} />
+                        </div>
+                      </div>
+
+                      <div className="flex-1 flex flex-col justify-between">
+                        <h3
+                          className="font-medium text-xs sm:text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:text-amber-800 transition-colors"
+                          title={book.title}
+                        >
+                          {book.title}
+                        </h3>
+                        {book.author ? (
+                          <p className="text-[10px] sm:text-[11px] text-zinc-500 truncate mt-0.5 sm:mt-1">{book.author}</p>
+                        ) : book.status ? (
+                          <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate mt-0.5 sm:mt-1">{book.status}</p>
+                        ) : null}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </section>
           );
         }
@@ -224,46 +273,92 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                 </div>
               </div>
 
-              {/* Tab Content Grid */}
-              <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4">
-                {currentTab?.items?.map((book) => (
-                  <Link
-                    key={book.id}
-                    href={`/book/${book.id}?source=${sourceId}`}
-                    className="group flex flex-col space-y-1.5 sm:space-y-2 p-1.5 sm:p-2 rounded-xl bg-white border border-zinc-200/70 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all"
-                  >
-                    <div className="w-full aspect-[4/5] rounded-lg overflow-hidden relative bg-zinc-100 shadow-inner">
-                      {book.cover ? (
-                        <img
-                          src={book.cover}
-                          alt={book.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            e.currentTarget.parentElement?.querySelector('.cover-placeholder')?.classList.remove('hidden');
-                          }}
-                        />
-                      ) : null}
-                      <div className={`cover-placeholder w-full h-full ${book.cover ? 'hidden' : ''}`}>
-                        <BookCoverPlaceholder title={book.title} />
-                      </div>
-                    </div>
+              {/* Tab Content: Ranking-style list if no covers, or visual cover grid */}
+              {!currentTab?.items?.some((b) => !!b.cover) ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
+                  {currentTab?.items?.map((book, bIdx) => {
+                    const rankNum = book.rank || bIdx + 1;
+                    const rankBadgeClass =
+                      rankNum === 1
+                        ? 'bg-amber-500 text-white shadow-xs font-bold'
+                        : rankNum === 2
+                        ? 'bg-zinc-400 text-white font-bold'
+                        : rankNum === 3
+                        ? 'bg-amber-700/80 text-white font-bold'
+                        : 'bg-zinc-100 text-zinc-500 font-medium';
 
-                    <div className="flex-1 flex flex-col justify-between">
-                      <h3
-                        className="font-medium text-xs sm:text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:text-amber-800 transition-colors"
-                        title={book.title}
+                    return (
+                      <Link
+                        key={book.id}
+                        href={`/book/${book.id}?source=${sourceId}`}
+                        className="group flex items-center gap-3 p-3 rounded-xl bg-white border border-zinc-200/70 hover:border-zinc-300 hover:shadow-xs transition-all"
                       >
-                        {book.title}
-                      </h3>
-                      {book.author && (
-                        <p className="text-[10px] sm:text-[11px] text-zinc-500 truncate mt-0.5 sm:mt-1">{book.author}</p>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                        <span
+                          className={`w-6 h-6 flex items-center justify-center text-xs rounded-md shrink-0 font-mono ${rankBadgeClass}`}
+                        >
+                          {rankNum}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:text-amber-800 transition-colors">
+                            {book.title}
+                          </p>
+                          <div className="flex items-center gap-2 text-[11px] text-zinc-400 mt-0.5">
+                            {book.author && <span className="truncate">{book.author}</span>}
+                            {book.status && (
+                              <span className="truncate text-zinc-400 font-mono text-[10px]">
+                                {book.status}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4">
+                  {currentTab?.items?.map((book) => (
+                    <Link
+                      key={book.id}
+                      href={`/book/${book.id}?source=${sourceId}`}
+                      className="group flex flex-col space-y-1.5 sm:space-y-2 p-1.5 sm:p-2 rounded-xl bg-white border border-zinc-200/70 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all"
+                    >
+                      <div className="w-full aspect-[4/5] rounded-lg overflow-hidden relative bg-zinc-100 shadow-inner">
+                        {book.cover ? (
+                          <img
+                            src={book.cover}
+                            alt={book.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                            onError={(e) => {
+                              // Fallback to placeholder on error
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.parentElement?.querySelector('.cover-placeholder')?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={`cover-placeholder w-full h-full ${book.cover ? 'hidden' : ''}`}>
+                          <BookCoverPlaceholder title={book.title} />
+                        </div>
+                      </div>
+
+                      <div className="flex-1 flex flex-col justify-between">
+                        <h3
+                          className="font-medium text-xs sm:text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:text-amber-800 transition-colors"
+                          title={book.title}
+                        >
+                          {book.title}
+                        </h3>
+                        {book.author ? (
+                          <p className="text-[10px] sm:text-[11px] text-zinc-500 truncate mt-0.5 sm:mt-1">{book.author}</p>
+                        ) : book.status ? (
+                          <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate mt-0.5 sm:mt-1">{book.status}</p>
+                        ) : null}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </section>
           );
         }

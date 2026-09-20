@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import { BookSource, SourceMeta, SearchResult, BookDetail, ChapterItem, ChapterContent, HomeSection, HomeBookItem } from '../types';
+import { BookSource, SourceMeta, SearchResult, BookDetail, ChapterItem, ChapterContent, HomeSection, HomeBookItem, HomeColumn } from '../types';
 import { fetchHtml } from '@/lib/request';
 
 /**
@@ -289,12 +289,47 @@ export class BanshanrenSource implements BookSource {
       const $ = cheerio.load(html);
       const sections: HomeSection[] = [];
 
-      // 1. 热门小说 (Grid)
+      // 1. 精选推荐 (from .banner_box .swiper-slide)
+      const bannerBooks: HomeBookItem[] = [];
+      $('.banner_box .swiper-slide').each((idx, el) => {
+        const a = $(el).find('a');
+        const href = a.attr('href') || '';
+        const idMatch = href.match(/\/novel\/([^/?#]+)/);
+        if (!idMatch) return;
+        const id = idMatch[1];
+
+        let title = $(el).find('p.title').text().trim();
+        if (!title) {
+          const aTitle = a.attr('title') || '';
+          if (aTitle !== '标题') title = aTitle;
+        }
+        if (!title) return;
+
+        const brief = $(el).find('p.brief').text().trim();
+        const infoText = $(el).find('.info').text().trim();
+        let status: string | undefined;
+        if (infoText.includes('已完结')) {
+          status = '已完结';
+        } else if (infoText.includes('连载中')) {
+          status = '连载中';
+        }
+
+        bannerBooks.push({
+          id,
+          title,
+          cover: '',
+          intro: brief || undefined,
+          status,
+          rank: idx + 1,
+        });
+      });
+
+      // 2. 热门小说
       const hotBooks: HomeBookItem[] = [];
       $('.main_box > div').each((_, el) => {
         const caption = $(el).find('.caption_box span').text().trim();
         if (caption === '热门小说') {
-          $(el).find('li.novel_li').each((_, li) => {
+          $(el).find('li.novel_li').each((idx, li) => {
             const a = $(li).find('a.cover_box');
             const href = a.attr('href') || '';
             const idMatch = href.match(/\/novel\/([^/]+)/);
@@ -304,26 +339,19 @@ export class BanshanrenSource implements BookSource {
             hotBooks.push({
               id,
               title,
+              rank: idx + 1,
               cover: '',
             });
           });
         }
       });
-      if (hotBooks.length > 0) {
-        sections.push({
-          id: 'hot',
-          title: '热门小说',
-          type: 'grid',
-          items: hotBooks,
-        });
-      }
 
-      // 2. 新书上架 (Grid)
+      // 3. 新书上架
       const newBooks: HomeBookItem[] = [];
       $('.main_box > div').each((_, el) => {
         const caption = $(el).find('.caption_box span').text().trim();
         if (caption === '新书上架') {
-          $(el).find('li.novel_li').each((_, li) => {
+          $(el).find('li.novel_li').each((idx, li) => {
             const a = $(li).find('a.cover_box');
             const href = a.attr('href') || '';
             const idMatch = href.match(/\/novel\/([^/]+)/);
@@ -333,21 +361,43 @@ export class BanshanrenSource implements BookSource {
             newBooks.push({
               id,
               title,
+              rank: idx + 1,
               cover: '',
             });
           });
         }
       });
+
+      // Combined 3-column leaderboard for recommendations (no images needed)
+      const recommendColumns: HomeColumn[] = [];
+      if (bannerBooks.length > 0) {
+        recommendColumns.push({
+          title: '精选推荐',
+          items: bannerBooks,
+        });
+      }
+      if (hotBooks.length > 0) {
+        recommendColumns.push({
+          title: '热门小说',
+          items: hotBooks,
+        });
+      }
       if (newBooks.length > 0) {
-        sections.push({
-          id: 'new',
+        recommendColumns.push({
           title: '新书上架',
-          type: 'grid',
           items: newBooks,
         });
       }
+      if (recommendColumns.length > 0) {
+        sections.push({
+          id: 'recommendations',
+          title: '精选力荐',
+          type: 'ranking',
+          columns: recommendColumns,
+        });
+      }
 
-      // 3. 排行榜 (3 columns: 新作榜, 收藏榜, 热评榜)
+      // 4. 排行榜 (3 columns: 新作榜, 收藏榜, 热评榜)
       const columns: { title: string; items: HomeBookItem[] }[] = [];
       $('.top_box .top_list_box > ul').each((_, ul) => {
         const colTitle = $(ul).find('.top_title').text().trim();
@@ -378,13 +428,13 @@ export class BanshanrenSource implements BookSource {
       if (columns.length > 0) {
         sections.push({
           id: 'rankings',
-          title: '排行榜',
+          title: '热度排行',
           type: 'ranking',
           columns,
         });
       }
 
-      // 4. 热门类型 (Tabs: 奇幻玄幻, BG言情, BL耽美, GL百合, 现代都市, 穿越重生, 武侠仙侠)
+      // 5. 热门类型 (Tabs: 奇幻玄幻, BG言情, BL耽美, GL百合, 现代都市, 穿越重生, 武侠仙侠)
       const categoryTabs: { key: string; label: string; items: HomeBookItem[] }[] = [];
       $('.main_box > div').each((_, el) => {
         const caption = $(el).find('.caption_box span').text().trim();
@@ -397,7 +447,7 @@ export class BanshanrenSource implements BookSource {
           $(el).find('ul.category_tab_list').each((idx, ul) => {
             const label = tabLabels[idx] || `分类 ${idx + 1}`;
             const items: HomeBookItem[] = [];
-            $(ul).find('li.novel_li').each((_, li) => {
+            $(ul).find('li.novel_li').each((bIdx, li) => {
               const a = $(li).find('a.cover_box');
               const href = a.attr('href') || '';
               const idMatch = href.match(/\/novel\/([^/]+)/);
@@ -407,6 +457,7 @@ export class BanshanrenSource implements BookSource {
               items.push({
                 id,
                 title,
+                rank: bIdx + 1,
                 cover: '',
               });
             });
@@ -429,7 +480,7 @@ export class BanshanrenSource implements BookSource {
         });
       }
 
-      // 5. 最新更新 (List)
+      // 6. 最新更新 (List)
       const updates: HomeBookItem[] = [];
       $('.main_box > div').each((_, el) => {
         const caption = $(el).find('.caption_box span').text().trim();
