@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChapterContent, ChapterItem } from '@/sources/types';
 import { ReaderSettings, storage } from '@/lib/storage';
+import { THEME_CHANGE_EVENT, ThemeType } from '@/lib/theme';
 import { ReaderSettingsModal } from './ReaderSettingsModal';
 import { ChapterDrawer } from './ChapterDrawer';
 import { BookmarkModal } from './BookmarkModal';
@@ -54,6 +55,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [switchingChapter, setSwitchingChapter] = useState<{ id: string; title: string } | null>(null);
   const [readingProgress, setReadingProgress] = useState(0);
   const [cachedChapterIds, setCachedChapterIds] = useState<Set<string>>(() => {
     const set = new Set<string>(initialCachedChapterIds || []);
@@ -71,6 +73,18 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     }
   }, [initialCachedChapterIds]);
 
+  // Sync settings when theme changes externally
+  useEffect(() => {
+    const handleThemeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<ThemeType>;
+      if (customEvent.detail) {
+        setSettings((prev) => ({ ...prev, theme: customEvent.detail }));
+      }
+    };
+    window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange);
+    return () => window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange);
+  }, []);
+
   // In-memory cache for chapters to make transitions instant
   const chapterCacheRef = useRef<Map<string, ChapterContent>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
@@ -84,6 +98,19 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       ? chaptersList[activeChapterIndex - 1].id
       : chaptersList[0]?.prevChapterId || null;
   const nextChapterId = chapter.nextChapterId;
+
+  // Relative chapter navigation IDs when switching to un-cached chapter
+  const switchingChapterIndex = switchingChapter
+    ? chapters.findIndex((c) => String(c.id) === String(switchingChapter.id))
+    : -1;
+  const currentPrevChapterId = switchingChapter
+    ? (switchingChapterIndex > 0 ? chapters[switchingChapterIndex - 1]?.id : null)
+    : prevChapterId;
+  const currentNextChapterId = switchingChapter
+    ? (switchingChapterIndex !== -1 && switchingChapterIndex < chapters.length - 1
+        ? chapters[switchingChapterIndex + 1]?.id
+        : null)
+    : nextChapterId;
 
   // Reset TTS paragraph index when active chapter changes
   useEffect(() => {
@@ -221,12 +248,22 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       // 2. Check cache first for instant load
       if (chapterCacheRef.current.has(targetChapterId)) {
         const cached = chapterCacheRef.current.get(targetChapterId)!;
+        setSwitchingChapter(null);
         setChaptersList([cached]);
         setActiveChapterIndex(0);
         window.scrollTo({ top: 0, behavior: 'instant' });
         window.history.replaceState(null, '', `/read/${cached.bookId}/${cached.id}?source=${sourceId}`);
         return;
       }
+
+      // 3. Optimistic UI: Immediately jump to top and render target chapter title with skeleton
+      const targetItem = chapters.find((c) => String(c.id) === String(targetChapterId));
+      const targetTitle = targetItem?.title || '正在加载章节...';
+
+      setSwitchingChapter({ id: targetChapterId, title: targetTitle });
+      setReadingProgress(0);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      window.history.replaceState(null, '', `/read/${chapter.bookId}/${targetChapterId}?source=${sourceId}`);
 
       setIsLoading(true);
       try {
@@ -239,18 +276,21 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           setCachedChapterIds((prev) => new Set(prev).add(targetChapterId));
           setChaptersList([data.data]);
           setActiveChapterIndex(0);
+          setSwitchingChapter(null);
           window.scrollTo({ top: 0, behavior: 'instant' });
           window.history.replaceState(null, '', `/read/${data.data.bookId}/${data.data.id}?source=${sourceId}`);
         } else {
+          setSwitchingChapter(null);
           alert(`加载章节失败: ${data.error || '未知错误'}`);
         }
       } catch (err: any) {
+        setSwitchingChapter(null);
         alert(`加载章节出错: ${err.message}`);
       } finally {
         setIsLoading(false);
       }
     },
-    [chaptersList, chapter.bookId, sourceId, isLoading]
+    [chaptersList, chapter.bookId, chapters, sourceId, isLoading]
   );
 
   // TTS next chapter auto trigger
@@ -274,10 +314,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
-      if (e.key === 'ArrowLeft' && prevChapterId) {
-        navigateToChapter(prevChapterId);
-      } else if (e.key === 'ArrowRight' && nextChapterId) {
-        navigateToChapter(nextChapterId);
+      if (e.key === 'ArrowLeft' && currentPrevChapterId) {
+        navigateToChapter(currentPrevChapterId);
+      } else if (e.key === 'ArrowRight' && currentNextChapterId) {
+        navigateToChapter(currentNextChapterId);
       } else if (e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) {
         e.preventDefault();
         window.scrollBy({ top: Math.round(window.innerHeight * 0.85), behavior: 'smooth' });
@@ -295,11 +335,12 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [prevChapterId, nextChapterId, navigateToChapter]);
+  }, [currentPrevChapterId, currentNextChapterId, navigateToChapter]);
 
   // Scroll listener for reading progress, active chapter tracking, and seamless infinite scrolling
   useEffect(() => {
     const handleScroll = () => {
+      if (switchingChapter) return;
       const scrollY = window.scrollY;
       const vh = window.innerHeight;
       const scrollHeight = document.documentElement.scrollHeight;
@@ -336,7 +377,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [chaptersList, activeChapterIndex, loadNextChapter, sourceId]);
+  }, [chaptersList, activeChapterIndex, loadNextChapter, sourceId, switchingChapter]);
 
   // Theme styling class
   const themeClass = `theme-${settings.theme}`;
@@ -365,6 +406,12 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       return;
     }
 
+    // 3. If currently in switching skeleton state, toggle controls
+    if (switchingChapter) {
+      setShowControls(true);
+      return;
+    }
+
     const vh = window.innerHeight;
     const vw = window.innerWidth;
     const clientY = e.clientY;
@@ -372,20 +419,20 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     const yRatio = clientY / vh;
     const xRatio = clientX / vw;
 
-    // 3. Center tap zone (middle 24% vertically, center 50% horizontally): toggle controls menu
+    // 4. Center tap zone (middle 24% vertically, center 50% horizontally): toggle controls menu
     if (yRatio >= 0.38 && yRatio <= 0.62 && xRatio >= 0.25 && xRatio <= 0.75) {
       setShowControls(true);
       return;
     }
 
-    // 4. Page distance: 85% of screen height (comfortable overlap)
+    // 5. Page distance: 85% of screen height (comfortable overlap)
     const pageDistance = Math.round(vh * 0.85);
 
     if (yRatio < 0.5) {
       // 上半部分：上一页
       if (window.scrollY <= 15) {
-        if (chapter.prevChapterId) {
-          navigateToChapter(chapter.prevChapterId);
+        if (currentPrevChapterId) {
+          navigateToChapter(currentPrevChapterId);
         }
       } else {
         window.scrollBy({ top: -pageDistance, behavior: 'smooth' });
@@ -395,8 +442,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       const scrollBottom = window.scrollY + vh;
       const docHeight = document.documentElement.scrollHeight;
       if (scrollBottom >= docHeight - 30) {
-        if (chapter.nextChapterId) {
-          navigateToChapter(chapter.nextChapterId);
+        if (currentNextChapterId) {
+          navigateToChapter(currentNextChapterId);
         }
       } else {
         window.scrollBy({ top: pageDistance, behavior: 'smooth' });
@@ -477,65 +524,97 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           fontFamily: getFontFamilyStyle(),
         }}
       >
-        {/* Continuous Chapter List */}
-        {chaptersList.map((ch, chIdx) => (
-          <section key={ch.id} id={`chapter-section-${ch.id}`}>
-            {chIdx > 0 ? (
-              /* Divider between continuous chapters */
-              <div className="my-16 pt-8 pb-10 border-t reader-border text-center select-none">
-                <div className="text-xs opacity-35 font-mono tracking-widest mb-6">
-                  —— 本章完 ——
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-bold font-serif tracking-tight pt-2 text-center">
-                  {ch.title}
-                </h2>
+        {/* If switching chapters to un-cached chapter, show optimistic target title + minimalist skeleton */}
+        {switchingChapter ? (
+          <section className="animate-fade-in select-none">
+            <h1 className="text-2xl sm:text-3xl font-bold font-serif mb-10 tracking-tight text-center pt-4">
+              {switchingChapter.title}
+            </h1>
+
+            {/* Minimalist Skeleton Paragraphs */}
+            <div className="space-y-7 pt-2">
+              <div className="space-y-3">
+                <div className="h-4 bg-current opacity-[0.08] rounded w-[30%] ml-[2em] animate-pulse" />
+                <div className="h-4 bg-current opacity-[0.08] rounded w-full animate-pulse" />
+                <div className="h-4 bg-current opacity-[0.08] rounded w-[92%] animate-pulse" />
+                <div className="h-4 bg-current opacity-[0.08] rounded w-[65%] animate-pulse" />
               </div>
-            ) : (
-              /* First Chapter Title */
-              <h1 className="text-2xl sm:text-3xl font-bold font-serif mb-10 tracking-tight text-center pt-4">
-                {ch.title}
-              </h1>
-            )}
 
-            {/* Paragraphs */}
-            <article className="reader-content select-text">
-              {ch.paragraphs.map((para, pIdx) => {
-                const isTtsActive =
-                  showTts && activeChapterIndex === chIdx && ttsParagraphIndex === pIdx;
-                return (
-                  <p
-                    key={pIdx}
-                    ref={(el) => {
-                      if (activeChapterIndex === chIdx) {
-                        paragraphRefs.current[pIdx] = el;
-                      }
-                    }}
-                    onClick={(e) => {
-                      if (showTts) {
-                        e.stopPropagation();
-                        setActiveChapterIndex(chIdx);
-                        setTtsParagraphIndex(pIdx);
-                      }
-                    }}
-                    dangerouslySetInnerHTML={{ __html: para }}
-                    className={`transition-all duration-300 ${
-                      isTtsActive
-                        ? 'bg-zinc-200/80 dark:bg-zinc-800/80 border-l-4 border-black dark:border-white pl-3.5 py-0.5 rounded-r shadow-sm font-medium'
-                        : ''
-                    } ${showTts ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 rounded' : ''}`}
-                  />
-                );
-              })}
-            </article>
+              <div className="space-y-3">
+                <div className="h-4 bg-current opacity-[0.08] rounded w-[40%] ml-[2em] animate-pulse" />
+                <div className="h-4 bg-current opacity-[0.08] rounded w-full animate-pulse" />
+                <div className="h-4 bg-current opacity-[0.08] rounded w-[88%] animate-pulse" />
+                <div className="h-4 bg-current opacity-[0.08] rounded w-[55%] animate-pulse" />
+              </div>
+
+              <div className="space-y-3">
+                <div className="h-4 bg-current opacity-[0.08] rounded w-[25%] ml-[2em] animate-pulse" />
+                <div className="h-4 bg-current opacity-[0.08] rounded w-full animate-pulse" />
+                <div className="h-4 bg-current opacity-[0.08] rounded w-[95%] animate-pulse" />
+                <div className="h-4 bg-current opacity-[0.08] rounded w-[70%] animate-pulse" />
+              </div>
+
+              <div className="space-y-3">
+                <div className="h-4 bg-current opacity-[0.08] rounded w-[35%] ml-[2em] animate-pulse" />
+                <div className="h-4 bg-current opacity-[0.08] rounded w-[85%] animate-pulse" />
+                <div className="h-4 bg-current opacity-[0.08] rounded w-[45%] animate-pulse" />
+              </div>
+            </div>
+
           </section>
-        ))}
+        ) : (
+          /* Continuous Chapter List */
+          chaptersList.map((ch, chIdx) => (
+            <section key={ch.id} id={`chapter-section-${ch.id}`} className={chIdx === 0 ? 'animate-fade-in' : ''}>
+              {chIdx > 0 ? (
+                /* Divider between continuous chapters */
+                <div className="my-16 pt-8 pb-10 border-t reader-border text-center select-none">
+                  <div className="text-xs opacity-35 font-mono tracking-widest mb-6">
+                    —— 本章完 ——
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-bold font-serif tracking-tight pt-2 text-center">
+                    {ch.title}
+                  </h2>
+                </div>
+              ) : (
+                /* First Chapter Title */
+                <h1 className="text-2xl sm:text-3xl font-bold font-serif mb-10 tracking-tight text-center pt-4">
+                  {ch.title}
+                </h1>
+              )}
 
-        {/* Loading overlay indicator */}
-        {isLoading && (
-          <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
-            <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm opacity-60">加载章节正文中...</p>
-          </div>
+              {/* Paragraphs */}
+              <article className="reader-content select-text">
+                {ch.paragraphs.map((para, pIdx) => {
+                  const isTtsActive =
+                    showTts && activeChapterIndex === chIdx && ttsParagraphIndex === pIdx;
+                  return (
+                    <p
+                      key={pIdx}
+                      ref={(el) => {
+                        if (activeChapterIndex === chIdx) {
+                          paragraphRefs.current[pIdx] = el;
+                        }
+                      }}
+                      onClick={(e) => {
+                        if (showTts) {
+                          e.stopPropagation();
+                          setActiveChapterIndex(chIdx);
+                          setTtsParagraphIndex(pIdx);
+                        }
+                      }}
+                      dangerouslySetInnerHTML={{ __html: para }}
+                      className={`transition-all duration-300 ${
+                        isTtsActive
+                          ? 'bg-zinc-200/80 dark:bg-zinc-800/80 border-l-4 border-black dark:border-white pl-3.5 py-0.5 rounded-r shadow-sm font-medium'
+                          : ''
+                      } ${showTts ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 rounded' : ''}`}
+                    />
+                  );
+                })}
+              </article>
+            </section>
+          ))
         )}
 
         {/* Seamless infinite loading indicator */}
@@ -563,17 +642,17 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-12 flex items-center justify-between text-xs">
           {/* 上一章（纯文字） */}
           <button
-            disabled={!prevChapterId}
+            disabled={!currentPrevChapterId || isLoading}
             onClick={(e) => {
               e.stopPropagation();
-              if (prevChapterId) navigateToChapter(prevChapterId);
+              if (currentPrevChapterId) navigateToChapter(currentPrevChapterId);
             }}
             className={`py-2 px-2 font-medium transition-opacity ${
-              prevChapterId
+              currentPrevChapterId && !isLoading
                 ? 'hover:opacity-70 active:opacity-50 cursor-pointer'
                 : 'opacity-25 cursor-not-allowed'
             }`}
-            title={prevChapterId ? '上一章' : '已是第一章'}
+            title={currentPrevChapterId ? '上一章' : '已是第一章'}
           >
             上一章
           </button>
@@ -588,26 +667,26 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             title="点击打开目录列表"
           >
             <span className="font-serif truncate inline-block max-w-[200px] sm:max-w-md align-middle text-xs sm:text-sm font-medium">
-              {chapter.title}
+              {switchingChapter ? switchingChapter.title : chapter.title}
             </span>
             <span className="opacity-50 ml-2 text-[11px] font-mono align-middle">
-              {readingProgress}%
+              {switchingChapter ? 0 : readingProgress}%
             </span>
           </button>
 
           {/* 下一章（纯文字） */}
           <button
-            disabled={!nextChapterId}
+            disabled={!currentNextChapterId || isLoading}
             onClick={(e) => {
               e.stopPropagation();
-              if (nextChapterId) navigateToChapter(nextChapterId);
+              if (currentNextChapterId) navigateToChapter(currentNextChapterId);
             }}
             className={`py-2 px-2 font-medium transition-opacity ${
-              nextChapterId
+              currentNextChapterId && !isLoading
                 ? 'hover:opacity-70 active:opacity-50 cursor-pointer'
                 : 'opacity-25 cursor-not-allowed'
             }`}
-            title={nextChapterId ? '下一章' : '已是最新章'}
+            title={currentNextChapterId ? '下一章' : '已是最新章'}
           >
             下一章
           </button>
@@ -621,7 +700,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         chapters={chapters}
         bookId={chapter.bookId}
         sourceId={sourceId}
-        currentChapterId={chapter.id}
+        currentChapterId={switchingChapter ? switchingChapter.id : chapter.id}
         cachedChapterIds={cachedChapterIds}
         onSelectChapter={(targetId) => {
           setShowDrawer(false);

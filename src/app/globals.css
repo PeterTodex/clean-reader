@@ -14,52 +14,370 @@
 }
 
 /* Modern High-Tech & Clean Reader Themes */
+:root,
 .theme-white {
-  background-color: #ffffff;
-  color: #09090b;
+  --bg-page: #fafafa;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f4f4f5;
+  --bg-subtle: #f4f4f5;
+  --bg-subtle-hover: #e4e4e7;
+  --text-primary: #09090b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+  --border-color: #e4e4e7;
+  --border-subtle: #f4f4f5;
+  --header-bg: rgba(255, 255, 255, 0.95);
+  --btn-primary-bg: #09090b;
+  --btn-primary-text: #ffffff;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
 }
 .theme-white .reader-border {
-  border-color: #e4e4e7;
-}
-
-.theme-eink {
-  background-color: #f4f4f5;
-  color: #09090b;
-}
-.theme-eink .reader-border {
-  border-color: #d4d4d8;
-}
-
-.theme-dark {
-  background-color: #09090b;
-  color: #f4f4f5;
-}
-.theme-dark .reader-border {
-  border-color: #27272a;
-}
-
-.theme-oled {
-  background-color: #000000;
-  color: #e4e4e7;
-}
-.theme-oled .reader-border {
-  border-color: #18181b;
+  border-color: var(--border-color);
 }
 
 .theme-parchment {
-  background-color: #faf8f5;
-  color: #18181b;
+  --bg-page: #f5ebd7;
+  --bg-card: #ece0c8;
+  --bg-card-hover: #e2d4b8;
+  --bg-subtle: #e5d6b8;
+  --bg-subtle-hover: #d9c8a6;
+  --text-primary: #2d1f11;
+  --text-secondary: #5e4732;
+  --text-muted: #8e735a;
+  --border-color: #dac8a4;
+  --border-subtle: #e6d7b9;
+  --header-bg: rgba(245, 235, 215, 0.96);
+  --btn-primary-bg: #342211;
+  --btn-primary-text: #f5ebd7;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
 }
 .theme-parchment .reader-border {
-  border-color: #e4e4e7;
+  border-color: var(--border-color);
 }
 
 .theme-eyecare {
-  background-color: #f0f4f1;
-  color: #142016;
+  --bg-page: #edf4ee;
+  --bg-card: #dfecdf;
+  --bg-card-hover: #d2e2d3;
+  --bg-subtle: #d6e6d8;
+  --bg-subtle-hover: #c7dbc9;
+  --text-primary: #142518;
+  --text-secondary: #3b5440;
+  --text-muted: #6b8470;
+  --border-color: #c4d9c7;
+  --border-subtle: #d3e5d6;
+  --header-bg: rgba(237, 244, 238, 0.96);
+  --btn-primary-bg: #1c3021;
+  --btn-primary-text: #edf4ee;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
 }
 .theme-eyecare .reader-border {
-  border-color: #d1ded3;
+  border-color: var(--border-color);
+}
+
+.theme-apricot {
+  --bg-page: #fbf4ea;
+  --bg-card: #f4e8d9;
+  --bg-card-hover: #ebd9c7;
+  --bg-subtle: #eeddc9;
+  --bg-subtle-hover: #e1cdb6;
+  --text-primary: #2d241c;
+  --text-secondary: #655445;
+  --text-muted: #958170;
+  --border-color: #dfcdb9;
+  --border-subtle: #ebdecb;
+  --header-bg: rgba(251, 244, 234, 0.96);
+  --btn-primary-bg: #362a20;
+  --btn-primary-text: #fbf4ea;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+}
+.theme-apricot .reader-border {
+  border-color: var(--border-color);
+}
+
+.theme-navy {
+  --bg-page: #0b1120;
+  --bg-card: #111a2e;
+  --bg-card-hover: #19243d;
+  --bg-subtle: #162139;
+  --bg-subtle-hover: #1e2d4d;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #7a8b9f;
+  --border-color: #1e293b;
+  --border-subtle: #152033;
+  --header-bg: rgba(11, 17, 32, 0.96);
+  --btn-primary-bg: #e2e8f0;
+  --btn-primary-text: #0b1120;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+}
+.theme-navy .reader-border {
+  border-color: var(--border-color);
+}
+
+.theme-dark {
+  --bg-page: #121214;
+  --bg-card: #1a1a1e;
+  --bg-card-hover: #242429;
+  --bg-subtle: #242429;
+  --bg-subtle-hover: #2e2e34;
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #8e8e96;
+  --border-color: #27272a;
+  --border-subtle: #1f1f23;
+  --header-bg: rgba(18, 18, 20, 0.96);
+  --btn-primary-bg: #f4f4f5;
+  --btn-primary-text: #121214;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+}
+.theme-dark .reader-border {
+  border-color: var(--border-color);
+}
+
+/* Global Theme Overrides for All Pages */
+html.theme-dark body,
+html.theme-navy body,
+html.theme-parchment body,
+html.theme-eyecare body,
+html.theme-apricot body {
+  background-color: var(--bg-page) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Page containers */
+.theme-dark .bg-\[\#fafafa\],
+.theme-navy .bg-\[\#fafafa\],
+.theme-parchment .bg-\[\#fafafa\],
+.theme-eyecare .bg-\[\#fafafa\],
+.theme-apricot .bg-\[\#fafafa\] {
+  background-color: var(--bg-page) !important;
+}
+
+/* Cards & Headers */
+.theme-dark .bg-white,
+.theme-navy .bg-white,
+.theme-parchment .bg-white,
+.theme-eyecare .bg-white,
+.theme-apricot .bg-white {
+  background-color: var(--bg-card) !important;
+}
+
+.theme-dark .bg-white\/95,
+.theme-navy .bg-white\/95,
+.theme-parchment .bg-white\/95,
+.theme-eyecare .bg-white\/95,
+.theme-apricot .bg-white\/95 {
+  background-color: var(--header-bg) !important;
+}
+
+/* Subtle backgrounds (inputs, pills, tags) */
+.theme-dark .bg-zinc-100,
+.theme-navy .bg-zinc-100,
+.theme-parchment .bg-zinc-100,
+.theme-eyecare .bg-zinc-100,
+.theme-apricot .bg-zinc-100,
+.theme-dark .bg-zinc-50,
+.theme-navy .bg-zinc-50,
+.theme-parchment .bg-zinc-50,
+.theme-eyecare .bg-zinc-50,
+.theme-apricot .bg-zinc-50,
+.theme-dark .bg-stone-50,
+.theme-navy .bg-stone-50,
+.theme-parchment .bg-stone-50,
+.theme-eyecare .bg-stone-50,
+.theme-apricot .bg-stone-50,
+.theme-dark .bg-zinc-50\/50,
+.theme-navy .bg-zinc-50\/50,
+.theme-parchment .bg-zinc-50\/50,
+.theme-eyecare .bg-zinc-50\/50,
+.theme-apricot .bg-zinc-50\/50 {
+  background-color: var(--bg-subtle) !important;
+}
+
+/* Hover overrides */
+.theme-dark .hover\:bg-zinc-100:hover,
+.theme-navy .hover\:bg-zinc-100:hover,
+.theme-parchment .hover\:bg-zinc-100:hover,
+.theme-eyecare .hover\:bg-zinc-100:hover,
+.theme-apricot .hover\:bg-zinc-100:hover,
+.theme-dark .hover\:bg-zinc-200:hover,
+.theme-navy .hover\:bg-zinc-200:hover,
+.theme-parchment .hover\:bg-zinc-200:hover,
+.theme-eyecare .hover\:bg-zinc-200:hover,
+.theme-apricot .hover\:bg-zinc-200:hover,
+.theme-dark .hover\:bg-zinc-50:hover,
+.theme-navy .hover\:bg-zinc-50:hover,
+.theme-parchment .hover\:bg-zinc-50:hover,
+.theme-eyecare .hover\:bg-zinc-50:hover,
+.theme-apricot .hover\:bg-zinc-50:hover {
+  background-color: var(--bg-card-hover) !important;
+}
+
+/* Border overrides */
+.theme-dark .border-zinc-200,
+.theme-dark .border-zinc-200\/70,
+.theme-dark .border-zinc-200\/80,
+.theme-dark .border-zinc-300,
+.theme-dark .border-stone-200\/70,
+.theme-navy .border-zinc-200,
+.theme-navy .border-zinc-200\/70,
+.theme-navy .border-zinc-200\/80,
+.theme-navy .border-zinc-300,
+.theme-navy .border-stone-200\/70,
+.theme-parchment .border-zinc-200,
+.theme-parchment .border-zinc-200\/70,
+.theme-parchment .border-zinc-200\/80,
+.theme-parchment .border-zinc-300,
+.theme-parchment .border-stone-200\/70,
+.theme-eyecare .border-zinc-200,
+.theme-eyecare .border-zinc-200\/70,
+.theme-eyecare .border-zinc-200\/80,
+.theme-eyecare .border-zinc-300,
+.theme-eyecare .border-stone-200\/70,
+.theme-apricot .border-zinc-200,
+.theme-apricot .border-zinc-200\/70,
+.theme-apricot .border-zinc-200\/80,
+.theme-apricot .border-zinc-300,
+.theme-apricot .border-stone-200\/70 {
+  border-color: var(--border-color) !important;
+}
+
+.theme-dark .border-zinc-100,
+.theme-navy .border-zinc-100,
+.theme-parchment .border-zinc-100,
+.theme-eyecare .border-zinc-100,
+.theme-apricot .border-zinc-100 {
+  border-color: var(--border-subtle) !important;
+}
+
+/* Text overrides */
+.theme-dark .text-zinc-950,
+.theme-dark .text-zinc-900,
+.theme-dark .text-zinc-800,
+.theme-navy .text-zinc-950,
+.theme-navy .text-zinc-900,
+.theme-navy .text-zinc-800,
+.theme-parchment .text-zinc-950,
+.theme-parchment .text-zinc-900,
+.theme-parchment .text-zinc-800,
+.theme-eyecare .text-zinc-950,
+.theme-eyecare .text-zinc-900,
+.theme-eyecare .text-zinc-800,
+.theme-apricot .text-zinc-950,
+.theme-apricot .text-zinc-900,
+.theme-apricot .text-zinc-800 {
+  color: var(--text-primary) !important;
+}
+
+.theme-dark .text-zinc-700,
+.theme-dark .text-zinc-600,
+.theme-navy .text-zinc-700,
+.theme-navy .text-zinc-600,
+.theme-parchment .text-zinc-700,
+.theme-parchment .text-zinc-600,
+.theme-eyecare .text-zinc-700,
+.theme-eyecare .text-zinc-600,
+.theme-apricot .text-zinc-700,
+.theme-apricot .text-zinc-600 {
+  color: var(--text-secondary) !important;
+}
+
+.theme-dark .text-zinc-500,
+.theme-dark .text-zinc-400,
+.theme-navy .text-zinc-500,
+.theme-navy .text-zinc-400,
+.theme-parchment .text-zinc-500,
+.theme-parchment .text-zinc-400,
+.theme-eyecare .text-zinc-500,
+.theme-eyecare .text-zinc-400,
+.theme-apricot .text-zinc-500,
+.theme-apricot .text-zinc-400 {
+  color: var(--text-muted) !important;
+}
+
+.theme-dark .hover\:text-zinc-950:hover,
+.theme-dark .hover\:text-zinc-900:hover,
+.theme-navy .hover\:text-zinc-950:hover,
+.theme-navy .hover\:text-zinc-900:hover,
+.theme-parchment .hover\:text-zinc-950:hover,
+.theme-parchment .hover\:text-zinc-900:hover,
+.theme-eyecare .hover\:text-zinc-950:hover,
+.theme-eyecare .hover\:text-zinc-900:hover,
+.theme-apricot .hover\:text-zinc-950:hover,
+.theme-apricot .hover\:text-zinc-900:hover {
+  color: var(--text-primary) !important;
+}
+
+/* High contrast and black-color handling in dark themes */
+.theme-dark .text-black:not(.keep-black),
+.theme-navy .text-black:not(.keep-black) {
+  color: var(--text-primary) !important;
+}
+
+.theme-dark .hover\:text-black:hover:not(.keep-black),
+.theme-navy .hover\:text-black:hover:not(.keep-black) {
+  color: var(--text-primary) !important;
+}
+
+.theme-dark .border-black:not(.keep-black),
+.theme-navy .border-black:not(.keep-black) {
+  border-color: var(--border-color) !important;
+}
+
+.theme-dark .hover\:border-black:hover:not(.keep-black),
+.theme-navy .hover\:border-black:hover:not(.keep-black) {
+  border-color: var(--text-secondary) !important;
+}
+
+.theme-dark .ring-black:not(.keep-black),
+.theme-navy .ring-black:not(.keep-black) {
+  --tw-ring-color: var(--text-primary) !important;
+}
+
+.theme-dark .accent-black,
+.theme-navy .accent-black {
+  accent-color: var(--text-primary) !important;
+}
+
+/* Active toggle button pattern (border-black bg-zinc-100) in dark themes */
+.theme-dark .border-black.bg-zinc-100,
+.theme-navy .border-black.bg-zinc-100 {
+  border-color: var(--text-secondary) !important;
+  background-color: var(--bg-subtle-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Primary buttons (bg-black) in dark themes */
+.theme-dark .bg-black:not(.keep-black),
+.theme-navy .bg-black:not(.keep-black) {
+  background-color: var(--btn-primary-bg) !important;
+  color: var(--btn-primary-text) !important;
+}
+
+.theme-dark .hover\:bg-zinc-800:hover:not(.keep-black),
+.theme-navy .hover\:bg-zinc-800:hover:not(.keep-black) {
+  background-color: var(--bg-card-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Chapter drawer theme adaptive active item and badge */
+.chapter-item-current {
+  background-color: var(--bg-subtle) !important;
+  color: var(--text-primary) !important;
+  border-left: 3px solid var(--btn-primary-bg) !important;
+  font-weight: 700;
+}
+
+.chapter-badge-current {
+  background-color: var(--btn-primary-bg) !important;
+  color: var(--btn-primary-text) !important;
 }
 
 /* Typography styles for novel reader content */
@@ -86,9 +404,9 @@
   filter: contrast(1.1);
 }
 
-/* In dark/oled theme, invert inline char images if needed */
+/* In dark/navy theme, invert inline char images if needed */
 .theme-dark .inline-char-img,
-.theme-oled .inline-char-img {
+.theme-navy .inline-char-img {
   filter: invert(0.9) hue-rotate(180deg);
 }
 
@@ -105,6 +423,22 @@
   border-radius: 9999px;
 }
 .theme-dark ::-webkit-scrollbar-thumb,
-.theme-oled ::-webkit-scrollbar-thumb {
+.theme-navy ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Subtle fade in transition */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

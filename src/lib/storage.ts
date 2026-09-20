@@ -25,7 +25,7 @@ export interface HistoryItem {
 }
 
 export interface ReaderSettings {
-  theme: 'parchment' | 'eyecare' | 'white' | 'eink' | 'dark' | 'oled';
+  theme: 'white' | 'parchment' | 'eyecare' | 'apricot' | 'navy' | 'dark';
   fontSize: number;
   lineHeight: number;
   fontFamily: 'serif' | 'sans' | 'kaiti';
@@ -36,7 +36,7 @@ export interface ReaderSettings {
 
 export const DEFAULT_READER_SETTINGS: ReaderSettings = {
   theme: 'white',
-  fontSize: 20,
+  fontSize: 16,
   lineHeight: 1.85,
   fontFamily: 'serif',
   maxWidth: 820,
@@ -194,7 +194,11 @@ export const storage = {
     if (typeof window === 'undefined') return DEFAULT_READER_SETTINGS;
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-      return data ? { ...DEFAULT_READER_SETTINGS, ...JSON.parse(data) } : DEFAULT_READER_SETTINGS;
+      if (!data) return DEFAULT_READER_SETTINGS;
+      const parsed = JSON.parse(data);
+      if (parsed.theme === 'oled') parsed.theme = 'dark';
+      if (parsed.theme === 'eink') parsed.theme = 'white';
+      return { ...DEFAULT_READER_SETTINGS, ...parsed };
     } catch {
       return DEFAULT_READER_SETTINGS;
     }
@@ -206,6 +210,21 @@ export const storage = {
     const updated = { ...current, ...settings };
     try {
       localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(updated));
+      if (settings.theme) {
+        let activeTheme = settings.theme as string;
+        if (activeTheme === 'oled') activeTheme = 'dark';
+        if (activeTheme === 'eink') activeTheme = 'white';
+        const root = document.documentElement;
+        const allThemes = ['white', 'dark', 'navy', 'apricot', 'parchment', 'eyecare', 'oled', 'eink'];
+        allThemes.forEach((t) => root.classList.remove(`theme-${t}`));
+        root.classList.add(`theme-${activeTheme}`);
+        if (activeTheme === 'dark' || activeTheme === 'navy') {
+          root.classList.add('dark');
+        } else {
+          root.classList.remove('dark');
+        }
+        window.dispatchEvent(new CustomEvent('clean-reader-theme-change', { detail: activeTheme }));
+      }
     } catch (e) {
       console.error('Failed to save settings:', e);
     }

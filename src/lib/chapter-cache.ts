@@ -1,198 +1,210 @@
-import { mkdirSync, statSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { ChapterContent, BookDetail, HomeSection } from '@/sources/types';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { basename, dirname, join } from 'node:path';
+import type { ChapterContent, BookDetail, HomeSection } from '@/sources/types';
 
 /**
- * Server-side relay cache for chapter bodies.
+ * File-based local library and chapter relay cache.
  *
- * Every request for a chapter used to hit the third-party source site, no matter how many
- * readers had already fetched that same chapter. This module turns the server into a relay:
- * the first request for a chapter is fetched and stored, and every later request is served
- * from the local SQLite file without touching the source site again.
+ * Directory structure:
+ *   .cache/books/
+ *   ├── _home/
+ *   │   └── [sourceId].json                       # Home sections cache
+ *   └── [sourceId]/
+ *       └── [safeTitle]_[bookId]/
+ *           ├── meta.json                         # Book metadata (author, intro, cover, etc.)
+ *           ├── toc.json                          # Table of contents index (id -> fileName mapping)
+ *           └── chapters/
+ *               ├── 0001_第一章 陨落的天才.txt
+ *               ├── 0002_第二章 斗之气三段.txt
+ *               └── ...
  *
- * This is a *shared* cache with no per-user partitioning — the key is the global
- * `(sourceId, bookId, chapterId)` triple.
+ * Each chapter TXT file format:
+ *   Line 1: Chapter title
+ *   Lines 2..N: Paragraphs
  *
- * Server-only: this module pulls in `node:sqlite`, so it must never be imported from a
- * `'use client'` file. The project has no `server-only` guard package; like `axios`/`cheerio`
- * in `src/sources/**`, this constraint is maintained by convention.
+ * Server-only: imported in API route handlers on Node.js runtime.
  */
 
-const DEFAULT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-/**
- * Measured against diyibanzhu: ~121KB per chapter on disk (as UTF-8 bytes — note that SQLite's
- * `length()` on a TEXT column counts characters, not bytes, and undercounts Chinese by ~3x).
- * 2000 entries is therefore roughly 240MB, enough to hold a full-length novel.
- *
- * The payload is stored verbatim (see `writeCachedChapter`) because a cache hit must return
- * exactly what a cache miss would have. About half of that size is the `content` HTML field,
- * which is a pure function of `paragraphs` and which nothing currently reads — dropping it
- * would halve the footprint, but at the cost of hits and misses returning differently-shaped
- * objects, and of couples the cache to how each adapter builds `content`.
- *
- * Override with CLEAN_READER_CACHE_MAX_ENTRIES.
- */
-const DEFAULT_MAX_ENTRIES = 2000;
-/**
- * Shape version of the JSON stored in `payload`. Bump this whenever `ChapterContent` changes.
- *
- * Without it, a row written by an older build still parses cleanly after a field is renamed —
- * it just silently lacks the new field, and the reader renders a blank page with no error and
- * no log pointing at the cache. See the read path for the eviction that handles the mismatch.
- */
-const SCHEMA_VERSION = 1;
-/** Cap on concurrently tracked upstream fetches, so a slow source can't grow the map unbounded. */
-const MAX_IN_FLIGHT = 256;
-/** When over capacity, prune down to this fraction of the cap so pruning isn't run every write. */
-const LOW_WATER_RATIO = 0.9;
-/**
- * A chapter shorter than this is treated as a failed/interstitial fetch rather than content.
- * The gate matters more here than in a per-request cache: a bad row isn't one bad response,
- * it's a bad response served to every future reader until the TTL expires.
- */
 const MIN_TEXT_LENGTH = 100;
-/** Refresh `last_access` at most this often, so a cache hit doesn't cost a write every time. */
-const LAST_ACCESS_THROTTLE_MS = 60 * 60 * 1000;
+const MAX_IN_FLIGHT = 256;
 
-function envInt(name: string, fallback: number): number {
-  const raw = process.env[name];
-  if (!raw) return fallback;
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+function resolveStorageDir(): string {
+  return process.env.CLEAN_READER_STORAGE_DIR || join(process.cwd(), '.cache', 'books');
 }
 
-const TTL_MS = envInt('CLEAN_READER_CACHE_TTL_MS', DEFAULT_TTL_MS);
-const MAX_ENTRIES = envInt('CLEAN_READER_CACHE_MAX_ENTRIES', DEFAULT_MAX_ENTRIES);
-
-function resolveDbPath(): string {
-  return process.env.CLEAN_READER_CACHE_DB || join(process.cwd(), '.cache', 'clean-reader.db');
-}
-
-const DB_PATH = resolveDbPath();
-
-type DatabaseSync = import('node:sqlite').DatabaseSync;
-type DatabaseSyncCtor = new (
-  path: string,
-  options?: import('node:sqlite').DatabaseSyncOptions
-) => DatabaseSync;
-
-// `undefined` = not resolved yet, `null` = unavailable on this Node version.
-let databaseSyncCtor: DatabaseSyncCtor | null | undefined;
+const STORAGE_DIR = resolveStorageDir();
 
 /**
- * Resolve `node:sqlite` lazily so that an unsupported Node version degrades to "caching
- * disabled" instead of crashing the whole route at import time.
+ * Sanitize strings for safe filesystem directory and file names.
+ * Replaces illegal characters (\ / : * ? " < > |), collapses whitespace,
+ * and truncates to 80 chars to avoid ENAMETOOLONG on Linux ext4 (255 byte limit).
  */
-function getDatabaseSyncCtor(): DatabaseSyncCtor | null {
-  if (databaseSyncCtor !== undefined) return databaseSyncCtor;
-
-  let resolved: DatabaseSyncCtor | null;
-  try {
-    const sqlite = require('node:sqlite') as typeof import('node:sqlite');
-    resolved = sqlite.DatabaseSync;
-  } catch (err: any) {
-    console.warn(
-      '[chapter-cache] node:sqlite is unavailable (requires Node >= 22.5). Chapter caching is disabled.',
-      err?.message || err
-    );
-    resolved = null;
-  }
-
-  databaseSyncCtor = resolved;
-  return resolved;
+export function sanitizePath(name: string): string {
+  if (!name) return 'untitled';
+  return (
+    name
+      .replace(/[\\/:*?"<>|]/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80) || 'untitled'
+  );
 }
 
-// Cached on globalThis so that `next dev` hot reloads don't leak database handles.
-const globalForCache = globalThis as typeof globalThis & {
-  __cleanReaderChapterDb?: DatabaseSync;
-};
+/** In-memory cache mapping `${sourceId}::${bookId}` -> directory absolute path */
+const bookDirCache = new Map<string, string>();
 
-/** Latched so a read-only or unsupported filesystem warns once instead of on every request. */
-let openFailed = false;
+/** In-memory cache mapping `${sourceId}::${bookId}` -> TocData */
+const tocCache = new Map<string, TocData>();
 
-function openDb(): DatabaseSync | null {
-  if (globalForCache.__cleanReaderChapterDb) return globalForCache.__cleanReaderChapterDb;
-  if (openFailed) return null;
+export interface TocChapterItem {
+  id: string;
+  index: number;
+  title: string;
+  fileName: string;
+}
 
-  const Ctor = getDatabaseSyncCtor();
-  if (!Ctor) {
-    openFailed = true;
-    return null;
-  }
+export interface TocData {
+  updatedAt: number;
+  chapters: TocChapterItem[];
+}
+
+export interface BookMetaFile {
+  id: string;
+  title: string;
+  author: string;
+  cover: string;
+  category?: string;
+  status?: string;
+  wordCount?: string;
+  latestChapter?: string;
+  updateTime?: string;
+  intro: string;
+  sourceId: string;
+  cachedAt: number;
+}
+
+function getSourceDir(sourceId: string): string {
+  return join(STORAGE_DIR, sanitizePath(sourceId));
+}
+
+/**
+ * Locate the book folder inside the source directory.
+ * Matches directory names ending with `_${bookId}` or strictly equal to `${bookId}`.
+ */
+function findBookDir(sourceId: string, bookId: string): string | null {
+  const cacheKey = `${sourceId}::${bookId}`;
+  const cached = bookDirCache.get(cacheKey);
+  if (cached && existsSync(cached)) return cached;
+
+  const sourceDir = getSourceDir(sourceId);
+  if (!existsSync(sourceDir)) return null;
 
   try {
-    mkdirSync(dirname(DB_PATH), { recursive: true });
-
-    // `timeout` sets SQLite's busy timeout. The default is 0, which throws SQLITE_BUSY the
-    // instant another process holds the write lock — that would surface here as a failed cache
-    // read, i.e. a silent miss, exactly when contention is highest.
-    const db = new Ctor(DB_PATH, { timeout: 5000 });
-
-    // WAL needs a shared-memory `-shm` mapping, which network filesystems don't support. Read
-    // the mode back rather than assuming, so the fallback is visible instead of fatal.
-    const journal = db.prepare('PRAGMA journal_mode = WAL').get() as { journal_mode?: string };
-    if (journal?.journal_mode !== 'wal') {
-      console.warn(
-        `[chapter-cache] WAL unavailable (journal_mode=${journal?.journal_mode}); continuing without it`
-      );
+    const entries = readdirSync(sourceDir, { withFileTypes: true });
+    const suffix = `_${bookId}`;
+    for (const entry of entries) {
+      if (entry.isDirectory() && (entry.name.endsWith(suffix) || entry.name === bookId)) {
+        const fullPath = join(sourceDir, entry.name);
+        bookDirCache.set(cacheKey, fullPath);
+        return fullPath;
+      }
     }
-
-    db.exec(`
-      PRAGMA synchronous = NORMAL;
-      CREATE TABLE IF NOT EXISTS chapters (
-        key            TEXT PRIMARY KEY,
-        source_id      TEXT NOT NULL,
-        book_id        TEXT NOT NULL,
-        chapter_id     TEXT NOT NULL,
-        schema_version INTEGER NOT NULL,
-        payload        TEXT NOT NULL,
-        cached_at      INTEGER NOT NULL,
-        last_access    INTEGER NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS idx_chapters_lru  ON chapters(last_access);
-      CREATE INDEX IF NOT EXISTS idx_chapters_book ON chapters(source_id, book_id);
-
-      CREATE TABLE IF NOT EXISTS books (
-        key            TEXT PRIMARY KEY,
-        source_id      TEXT NOT NULL,
-        book_id        TEXT NOT NULL,
-        payload        TEXT NOT NULL,
-        cached_at      INTEGER NOT NULL,
-        last_access    INTEGER NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS idx_books_key ON books(key);
-
-      CREATE TABLE IF NOT EXISTS home (
-        source_id      TEXT PRIMARY KEY,
-        payload        TEXT NOT NULL,
-        cached_at      INTEGER NOT NULL
-      );
-    `);
-
-    console.log(`[chapter-cache] Opened ${DB_PATH}`);
-    globalForCache.__cleanReaderChapterDb = db;
-    return db;
   } catch (err: any) {
-    openFailed = true;
-    console.warn(
-      `[chapter-cache] Could not open ${DB_PATH} — chapter caching is disabled for this process. ` +
-        `Set CLEAN_READER_CACHE_DB to a writable path if the filesystem is read-only.`,
-      err?.message || err
-    );
-    return null;
+    console.warn(`[chapter-cache] Failed to scan source directory ${sourceDir}:`, err?.message || err);
   }
+
+  return null;
+}
+
+/**
+ * Ensure the book directory exists and is registered in memory.
+ * If title is available, names it `${safeTitle}_${bookId}`.
+ */
+function ensureBookDir(sourceId: string, bookId: string, title?: string): string {
+  const existing = findBookDir(sourceId, bookId);
+  if (existing) {
+    if (title) {
+      const dirName = basename(existing);
+      const expectedName = `${sanitizePath(title)}_${bookId}`;
+      if (dirName !== expectedName && (dirName === `book_${bookId}` || dirName === bookId)) {
+        const newPath = join(getSourceDir(sourceId), expectedName);
+        try {
+          renameSync(existing, newPath);
+          bookDirCache.set(`${sourceId}::${bookId}`, newPath);
+          return newPath;
+        } catch {
+          // Continue using existing if rename fails
+        }
+      }
+    }
+    return existing;
+  }
+
+  const safeTitle = title ? sanitizePath(title) : `book_${bookId}`;
+  const dirName = title ? `${safeTitle}_${bookId}` : `book_${bookId}`;
+  const fullPath = join(getSourceDir(sourceId), dirName);
+  mkdirSync(join(fullPath, 'chapters'), { recursive: true });
+  bookDirCache.set(`${sourceId}::${bookId}`, fullPath);
+  return fullPath;
+}
+
+/**
+ * Atomic write helper: writes to a unique temporary file and renames it.
+ * Guarantees zero half-written or corrupted files upon process interruption.
+ */
+function atomicWriteFileSync(filePath: string, content: string): void {
+  const dir = dirname(filePath);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  const tmpPath = `${filePath}.tmp.${Date.now()}.${Math.random().toString(36).slice(2, 8)}`;
+  writeFileSync(tmpPath, content, 'utf-8');
+  renameSync(tmpPath, filePath);
+}
+
+function readToc(sourceId: string, bookId: string): TocData | null {
+  const cacheKey = `${sourceId}::${bookId}`;
+  const inMem = tocCache.get(cacheKey);
+  if (inMem) return inMem;
+
+  const bookDir = findBookDir(sourceId, bookId);
+  if (!bookDir) return null;
+
+  const tocPath = join(bookDir, 'toc.json');
+  if (!existsSync(tocPath)) return null;
+
+  try {
+    const raw = readFileSync(tocPath, 'utf-8');
+    const parsed = JSON.parse(raw) as TocData;
+    if (parsed && Array.isArray(parsed.chapters)) {
+      tocCache.set(cacheKey, parsed);
+      return parsed;
+    }
+  } catch (err: any) {
+    console.warn(`[chapter-cache] Failed to read toc.json at ${tocPath}:`, err?.message || err);
+  }
+  return null;
+}
+
+function writeToc(sourceId: string, bookId: string, toc: TocData): void {
+  const bookDir = ensureBookDir(sourceId, bookId);
+  const tocPath = join(bookDir, 'toc.json');
+  atomicWriteFileSync(tocPath, JSON.stringify(toc, null, 2));
+  tocCache.set(`${sourceId}::${bookId}`, toc);
 }
 
 export function chapterCacheKey(sourceId: string, bookId: string, chapterId: string): string {
   return `${sourceId}::${bookId}::${chapterId}`;
 }
 
-/**
- * Decide whether a fetched chapter is fit to be stored.
- *
- * Never cache a failure: a rejected fetch or an ad/interstitial page that slipped through
- * would otherwise be replayed to every subsequent reader for the whole TTL.
- */
 export function isWorthCaching(content: ChapterContent | null | undefined): content is ChapterContent {
   if (!content) return false;
   if (!Array.isArray(content.paragraphs) || content.paragraphs.length === 0) return false;
@@ -200,67 +212,81 @@ export function isWorthCaching(content: ChapterContent | null | undefined): cont
   return textLength >= MIN_TEXT_LENGTH;
 }
 
+/**
+ * Read cached chapter from the filesystem.
+ */
 export function readCachedChapter(
   sourceId: string,
   bookId: string,
   chapterId: string
 ): ChapterContent | null {
   try {
-    const db = openDb();
-    if (!db) return null;
+    const bookDir = findBookDir(sourceId, bookId);
+    if (!bookDir) return null;
 
-    const key = chapterCacheKey(sourceId, bookId, chapterId);
-    const row = db
-      .prepare(
-        'SELECT payload, cached_at, last_access, schema_version FROM chapters WHERE key = ?'
-      )
-      .get(key) as
-      | { payload: string; cached_at: number; last_access: number; schema_version: number }
-      | undefined;
+    const toc = readToc(sourceId, bookId);
+    let fileName: string | undefined;
+    let chTitle = '';
+    let prevChapterId: string | null = null;
+    let nextChapterId: string | null = null;
 
-    if (!row) return null;
+    if (toc) {
+      const chIndex = toc.chapters.findIndex((c) => c.id === chapterId);
+      if (chIndex >= 0) {
+        const item = toc.chapters[chIndex];
+        fileName = item.fileName;
+        chTitle = item.title;
+        prevChapterId = chIndex > 0 ? toc.chapters[chIndex - 1].id : null;
+        nextChapterId = chIndex < toc.chapters.length - 1 ? toc.chapters[chIndex + 1].id : null;
+      }
+    }
 
-    // Written by an older build, or below the quality gate. Drop it rather than hand the caller
-    // an object that type-checks but is missing fields.
-    if (row.schema_version !== SCHEMA_VERSION) {
-      db.prepare('DELETE FROM chapters WHERE key = ?').run(key);
+    // Fallback: If not in toc, look in chapters directory by prefix or id
+    const chaptersDir = join(bookDir, 'chapters');
+    if (!existsSync(chaptersDir)) return null;
+
+    if (!fileName) {
+      const files = readdirSync(chaptersDir);
+      fileName = files.find((f) => f.includes(`_${chapterId}`) || f.startsWith(`${chapterId}_`));
+      if (!fileName) return null;
+    }
+
+    const filePath = join(chaptersDir, fileName);
+    if (!existsSync(filePath)) return null;
+
+    const raw = readFileSync(filePath, 'utf-8');
+    const lines = raw.split('\n');
+    const fileTitle = lines[0]?.trim();
+    const paragraphs = lines.slice(1).map((p) => p.trim()).filter((p) => p.length > 0);
+
+    // Validate content length
+    const totalLength = paragraphs.reduce((sum, p) => sum + p.length, 0);
+    if (totalLength < MIN_TEXT_LENGTH) {
       return null;
     }
 
-    const now = Date.now();
-    if (now - row.cached_at > TTL_MS) {
-      db.prepare('DELETE FROM chapters WHERE key = ?').run(key);
-      return null;
-    }
+    const title = chTitle || fileTitle || '未知章节';
+    const content = paragraphs.map((p) => `<p>${p}</p>`).join('\n');
 
-    if (now - row.last_access > LAST_ACCESS_THROTTLE_MS) {
-      db.prepare('UPDATE chapters SET last_access = ? WHERE key = ?').run(now, key);
-    }
-
-    let parsed: ChapterContent;
-    try {
-      parsed = JSON.parse(row.payload) as ChapterContent;
-    } catch (err: any) {
-      // Truncated write or corrupt row: delete it, otherwise every future read re-parses it.
-      console.warn(`[chapter-cache] Dropping unparseable row for ${key}:`, err?.message || err);
-      db.prepare('DELETE FROM chapters WHERE key = ?').run(key);
-      return null;
-    }
-
-    // Guard against rows written before the quality gate was tightened.
-    if (!Array.isArray(parsed?.paragraphs) || parsed.paragraphs.length === 0) {
-      db.prepare('DELETE FROM chapters WHERE key = ?').run(key);
-      return null;
-    }
-
-    return parsed;
+    return {
+      id: chapterId,
+      bookId,
+      title,
+      content,
+      paragraphs,
+      nextChapterId,
+      prevChapterId,
+      sourceId,
+    };
   } catch (err: any) {
-    // A broken cache must never break a read — fall through to a live fetch.
-    console.warn('[chapter-cache] Read failed:', err?.message || err);
+    console.warn(`[chapter-cache] Read chapter ${sourceId}/${bookId}/${chapterId} failed:`, err?.message || err);
     return null;
   }
 }
 
+/**
+ * Write a chapter into its dedicated .txt file.
+ */
 export function writeCachedChapter(
   sourceId: string,
   bookId: string,
@@ -275,62 +301,59 @@ export function writeCachedChapter(
   }
 
   try {
-    const db = openDb();
-    if (!db) return false;
+    const bookDir = ensureBookDir(sourceId, bookId);
+    let toc = readToc(sourceId, bookId);
+    let fileName: string;
 
-    const now = Date.now();
-    db.prepare(
-      `INSERT INTO chapters (key, source_id, book_id, chapter_id, schema_version, payload, cached_at, last_access)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(key) DO UPDATE SET
-         schema_version = excluded.schema_version,
-         payload = excluded.payload,
-         cached_at = excluded.cached_at,
-         last_access = excluded.last_access`
-    ).run(
-      chapterCacheKey(sourceId, bookId, chapterId),
-      sourceId,
-      bookId,
-      chapterId,
-      SCHEMA_VERSION,
-      JSON.stringify(content),
-      now,
-      now
-    );
+    if (!toc) {
+      fileName = `0001_${sanitizePath(content.title)}.txt`;
+      toc = {
+        updatedAt: Date.now(),
+        chapters: [
+          {
+            id: chapterId,
+            index: 1,
+            title: content.title,
+            fileName,
+          },
+        ],
+      };
+      writeToc(sourceId, bookId, toc);
+    } else {
+      let item = toc.chapters.find((c) => c.id === chapterId);
+      if (item) {
+        fileName = item.fileName;
+      } else {
+        const nextIndex = toc.chapters.length + 1;
+        fileName = `${String(nextIndex).padStart(4, '0')}_${sanitizePath(content.title)}.txt`;
+        toc.chapters.push({
+          id: chapterId,
+          index: nextIndex,
+          title: content.title,
+          fileName,
+        });
+        toc.updatedAt = Date.now();
+        writeToc(sourceId, bookId, toc);
+      }
+    }
 
-    pruneIfOverCapacity(db);
+    const chaptersDir = join(bookDir, 'chapters');
+    if (!existsSync(chaptersDir)) {
+      mkdirSync(chaptersDir, { recursive: true });
+    }
+
+    const targetFile = join(chaptersDir, fileName);
+    const fileBody = `${content.title}\n${content.paragraphs.join('\n')}\n`;
+    atomicWriteFileSync(targetFile, fileBody);
     return true;
   } catch (err: any) {
-    console.warn('[chapter-cache] Write failed:', err?.message || err);
+    console.warn(`[chapter-cache] Write chapter ${sourceId}/${bookId}/${chapterId} failed:`, err?.message || err);
     return false;
   }
 }
 
-function pruneIfOverCapacity(db: DatabaseSync): void {
-  try {
-    const countRow = db.prepare('SELECT COUNT(*) AS n FROM chapters').get() as { n: number };
-    if (countRow.n <= MAX_ENTRIES) return;
-
-    const target = Math.floor(MAX_ENTRIES * LOW_WATER_RATIO);
-    const toDelete = countRow.n - target;
-
-    db.prepare(
-      `DELETE FROM chapters WHERE key IN (
-         SELECT key FROM chapters ORDER BY last_access ASC LIMIT ?
-       )`
-    ).run(toDelete);
-
-    console.log(
-      `[chapter-cache] Pruned ${toDelete} entries (had ${countRow.n}, cap ${MAX_ENTRIES})`
-    );
-  } catch (err: any) {
-    console.warn('[chapter-cache] Prune failed:', err?.message || err);
-  }
-}
-
-// Shared across both entry points (/api/chapter and the TXT export) so concurrent readers of
-// the same chapter trigger a single upstream fetch.
-const inFlight = new Map<string, Promise<ChapterContent>>();
+// In-flight fetch deduplication map
+const inFlightChapters = new Map<string, Promise<ChapterContent>>();
 
 export interface CachedChapterResult {
   content: ChapterContent;
@@ -338,8 +361,7 @@ export interface CachedChapterResult {
 }
 
 /**
- * Read-through wrapper: serve from cache when possible, otherwise run `fetcher` once and store
- * the result. Concurrent callers requesting the same chapter share a single `fetcher` call.
+ * Read-through wrapper for chapter content.
  */
 export async function fetchChapterWithCache(
   sourceId: string,
@@ -347,143 +369,73 @@ export async function fetchChapterWithCache(
   chapterId: string,
   fetcher: () => Promise<ChapterContent>
 ): Promise<CachedChapterResult> {
-  // Stays synchronous on purpose: read → check in-flight → register must be one indivisible
-  // step. Introducing an `await` before `inFlight.set` would let two concurrent callers both
-  // see a miss and both hit the source — a race that only shows up under load.
   const cached = readCachedChapter(sourceId, bookId, chapterId);
   if (cached) return { content: cached, cached: true };
 
   const key = chapterCacheKey(sourceId, bookId, chapterId);
-  const pending = inFlight.get(key);
+  const pending = inFlightChapters.get(key);
   if (pending) return { content: await pending, cached: false };
 
-  // When the source is slow, every concurrent request for a *different* chapter adds an entry.
-  // Past the cap we stop de-duplicating rather than growing without bound — callers just fetch
-  // independently, which is the pre-dedup behaviour.
-  if (inFlight.size >= MAX_IN_FLIGHT) {
+  if (inFlightChapters.size >= MAX_IN_FLIGHT) {
     const content = await fetcher();
     writeCachedChapter(sourceId, bookId, chapterId, content);
     return { content, cached: false };
   }
 
   const promise = fetcher();
-  inFlight.set(key, promise);
+  inFlightChapters.set(key, promise);
   try {
     const content = await promise;
     writeCachedChapter(sourceId, bookId, chapterId, content);
     return { content, cached: false };
   } finally {
-    // Must run on the rejection path too: a rejected promise left in the map would be handed
-    // to every future caller, permanently breaking that chapter.
-    inFlight.delete(key);
+    inFlightChapters.delete(key);
   }
 }
 
 /**
  * Retrieve all cached chapter IDs for a given book and source.
- * Only returns valid, unexpired chapters matching the current SCHEMA_VERSION.
  */
 export function getCachedChapterIds(sourceId: string, bookId: string): string[] {
   try {
-    const db = openDb();
-    if (!db) return [];
-    const now = Date.now();
-    const rows = db
-      .prepare(
-        'SELECT chapter_id FROM chapters WHERE source_id = ? AND book_id = ? AND schema_version = ? AND (? - cached_at <= ?)'
-      )
-      .all(sourceId, bookId, SCHEMA_VERSION, now, TTL_MS) as { chapter_id: string }[];
-    return rows.map((r) => r.chapter_id);
+    const bookDir = findBookDir(sourceId, bookId);
+    if (!bookDir) return [];
+
+    const toc = readToc(sourceId, bookId);
+    if (!toc || !Array.isArray(toc.chapters) || toc.chapters.length === 0) return [];
+
+    const chaptersDir = join(bookDir, 'chapters');
+    if (!existsSync(chaptersDir)) return [];
+
+    const existingFiles = new Set(readdirSync(chaptersDir));
+    return toc.chapters.filter((c) => existingFiles.has(c.fileName)).map((c) => c.id);
   } catch (err: any) {
-    console.warn('[chapter-cache] getCachedChapterIds failed:', err?.message || err);
+    console.warn(`[chapter-cache] getCachedChapterIds failed:`, err?.message || err);
     return [];
   }
 }
 
 /**
- * Check if a specific chapter is cached in the database.
+ * Check if a specific chapter is cached on disk.
  */
 export function isChapterCached(sourceId: string, bookId: string, chapterId: string): boolean {
   try {
-    const db = openDb();
-    if (!db) return false;
-    const now = Date.now();
-    const row = db
-      .prepare(
-        'SELECT 1 FROM chapters WHERE key = ? AND schema_version = ? AND (? - cached_at <= ?)'
-      )
-      .get(chapterCacheKey(sourceId, bookId, chapterId), SCHEMA_VERSION, now, TTL_MS);
-    return !!row;
+    const bookDir = findBookDir(sourceId, bookId);
+    if (!bookDir) return false;
+
+    const toc = readToc(sourceId, bookId);
+    if (!toc) return false;
+
+    const item = toc.chapters.find((c) => c.id === chapterId);
+    if (!item) return false;
+
+    return existsSync(join(bookDir, 'chapters', item.fileName));
   } catch {
     return false;
   }
 }
 
-export interface ChapterCacheStats {
-  entries: number;
-  dbPath: string;
-  maxEntries: number;
-  ttlMs: number;
-  enabled: boolean;
-  /** On-disk size of the database plus its WAL sidecar. */
-  diskBytes: number;
-  /** Approximate on-disk size of the cached payloads themselves. */
-  payloadBytes: number;
-}
-
-const EMPTY_STATS: Omit<ChapterCacheStats, 'diskBytes' | 'payloadBytes'> = {
-  entries: 0,
-  dbPath: DB_PATH,
-  maxEntries: MAX_ENTRIES,
-  ttlMs: TTL_MS,
-  enabled: false,
-};
-
-function diskUsage(): number {
-  // WAL mode keeps recently written pages in a sidecar until a checkpoint, so the .db file
-  // alone under-reports what the cache actually occupies.
-  let total = 0;
-  for (const suffix of ['', '-wal', '-shm']) {
-    try {
-      total += statSync(`${DB_PATH}${suffix}`).size;
-    } catch {
-      // Sidecar may not exist (yet); nothing to add.
-    }
-  }
-  return total;
-}
-
-/** Diagnostics for the cache. Cheap enough to call from a route handler. */
-export function getChapterCacheStats(): ChapterCacheStats {
-  const db = openDb();
-  if (!db) {
-    return { ...EMPTY_STATS, diskBytes: diskUsage(), payloadBytes: 0 };
-  }
-
-  try {
-    const row = db
-      .prepare('SELECT COUNT(*) AS n, COALESCE(SUM(length(CAST(payload AS BLOB))), 0) AS bytes FROM chapters')
-      .get() as { n: number; bytes: number };
-    return {
-      entries: row.n,
-      dbPath: DB_PATH,
-      maxEntries: MAX_ENTRIES,
-      ttlMs: TTL_MS,
-      enabled: true,
-      diskBytes: diskUsage(),
-      payloadBytes: Number(row.bytes),
-    };
-  } catch (err: any) {
-    console.warn('[chapter-cache] Stats failed:', err?.message || err);
-    return { ...EMPTY_STATS, diskBytes: diskUsage(), payloadBytes: 0 };
-  }
-}
-
-// ==============================================================================
-// Book Detail Cache (SQLite)
-// ==============================================================================
-
-const BOOK_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+// In-flight book fetch deduplication map
 const inFlightBooks = new Map<string, Promise<BookDetail>>();
 
 export function bookCacheKey(sourceId: string, bookId: string): string {
@@ -492,38 +444,37 @@ export function bookCacheKey(sourceId: string, bookId: string): string {
 
 export function readCachedBook(sourceId: string, bookId: string): BookDetail | null {
   try {
-    const db = openDb();
-    if (!db) return null;
+    const bookDir = findBookDir(sourceId, bookId);
+    if (!bookDir) return null;
 
-    const key = bookCacheKey(sourceId, bookId);
-    const row = db
-      .prepare('SELECT payload, cached_at FROM books WHERE key = ?')
-      .get(key) as { payload: string; cached_at: number } | undefined;
+    const metaPath = join(bookDir, 'meta.json');
+    const tocPath = join(bookDir, 'toc.json');
+    if (!existsSync(metaPath) || !existsSync(tocPath)) return null;
 
-    if (!row) return null;
+    const meta = JSON.parse(readFileSync(metaPath, 'utf-8')) as BookMetaFile;
+    const toc = readToc(sourceId, bookId);
+    if (!meta || !toc || !Array.isArray(toc.chapters) || toc.chapters.length === 0) return null;
 
-    const now = Date.now();
-    if (now - row.cached_at > BOOK_TTL_MS) {
-      db.prepare('DELETE FROM books WHERE key = ?').run(key);
-      return null;
-    }
-
-    let parsed: BookDetail;
-    try {
-      parsed = JSON.parse(row.payload) as BookDetail;
-    } catch {
-      db.prepare('DELETE FROM books WHERE key = ?').run(key);
-      return null;
-    }
-
-    if (!parsed || !Array.isArray(parsed.chapters) || parsed.chapters.length === 0) {
-      db.prepare('DELETE FROM books WHERE key = ?').run(key);
-      return null;
-    }
-
-    return parsed;
+    return {
+      id: meta.id || bookId,
+      title: meta.title,
+      author: meta.author,
+      cover: meta.cover,
+      category: meta.category,
+      status: meta.status,
+      wordCount: meta.wordCount,
+      latestChapter: meta.latestChapter,
+      updateTime: meta.updateTime,
+      intro: meta.intro,
+      sourceId: meta.sourceId || sourceId,
+      chapters: toc.chapters.map((c) => ({
+        id: c.id,
+        title: c.title,
+        index: c.index,
+      })),
+    };
   } catch (err: any) {
-    console.warn('[chapter-cache] Read book failed:', err?.message || err);
+    console.warn(`[chapter-cache] Read book ${sourceId}/${bookId} failed:`, err?.message || err);
     return null;
   }
 }
@@ -531,23 +482,52 @@ export function readCachedBook(sourceId: string, bookId: string): BookDetail | n
 export function writeCachedBook(sourceId: string, bookId: string, detail: BookDetail): void {
   if (!detail || !Array.isArray(detail.chapters) || detail.chapters.length === 0) return;
   try {
-    const db = openDb();
-    if (!db) return;
+    const bookDir = ensureBookDir(sourceId, bookId, detail.title);
 
-    const key = bookCacheKey(sourceId, bookId);
-    const now = Date.now();
-    const payload = JSON.stringify(detail);
+    // 1. Write meta.json
+    const meta: BookMetaFile = {
+      id: detail.id || bookId,
+      title: detail.title,
+      author: detail.author,
+      cover: detail.cover,
+      category: detail.category,
+      status: detail.status,
+      wordCount: detail.wordCount,
+      latestChapter: detail.latestChapter,
+      updateTime: detail.updateTime,
+      intro: detail.intro,
+      sourceId: detail.sourceId || sourceId,
+      cachedAt: Date.now(),
+    };
+    atomicWriteFileSync(join(bookDir, 'meta.json'), JSON.stringify(meta, null, 2));
 
-    db.prepare(`
-      INSERT INTO books (key, source_id, book_id, payload, cached_at, last_access)
-      VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(key) DO UPDATE SET
-        payload = excluded.payload,
-        cached_at = excluded.cached_at,
-        last_access = excluded.last_access
-    `).run(key, sourceId, bookId, payload, now, now);
+    // 2. Preserve existing chapter file mappings in toc.json
+    const existingToc = readToc(sourceId, bookId);
+    const existingFileMap = new Map<string, string>();
+    if (existingToc) {
+      for (const c of existingToc.chapters) {
+        existingFileMap.set(c.id, c.fileName);
+      }
+    }
+
+    const toc: TocData = {
+      updatedAt: Date.now(),
+      chapters: detail.chapters.map((ch, idx) => {
+        const index = ch.index || idx + 1;
+        const fileName =
+          existingFileMap.get(ch.id) ||
+          `${String(index).padStart(4, '0')}_${sanitizePath(ch.title)}.txt`;
+        return {
+          id: ch.id,
+          index,
+          title: ch.title,
+          fileName,
+        };
+      }),
+    };
+    writeToc(sourceId, bookId, toc);
   } catch (err: any) {
-    console.warn('[chapter-cache] Write book failed:', err?.message || err);
+    console.warn(`[chapter-cache] Write book ${sourceId}/${bookId} failed:`, err?.message || err);
   }
 }
 
@@ -581,28 +561,24 @@ export async function fetchBookWithCache(
   }
 }
 
-const HOME_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+// In-flight home fetch deduplication map
 const inFlightHome = new Map<string, Promise<HomeSection[]>>();
+
+function getHomeCachePath(sourceId: string): string {
+  return join(STORAGE_DIR, '_home', `${sanitizePath(sourceId)}.json`);
+}
 
 export function readCachedHome(sourceId: string): HomeSection[] | null {
   try {
-    const db = openDb();
-    if (!db) return null;
-
-    const row = db.prepare('SELECT payload, cached_at FROM home WHERE source_id = ?').get(sourceId) as
-      | { payload: string; cached_at: number }
-      | undefined;
-    if (!row) return null;
-
-    if (Date.now() - row.cached_at > HOME_CACHE_TTL_MS) {
-      return null;
+    const filePath = getHomeCachePath(sourceId);
+    if (!existsSync(filePath)) return null;
+    const raw = readFileSync(filePath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed?.sections) && parsed.sections.length > 0) {
+      return parsed.sections as HomeSection[];
     }
-
-    const parsed = JSON.parse(row.payload);
-    if (!Array.isArray(parsed)) return null;
-    return parsed;
-  } catch (err: any) {
-    console.warn('[chapter-cache] Read home failed:', err?.message || err);
+    return null;
+  } catch {
     return null;
   }
 }
@@ -610,20 +586,14 @@ export function readCachedHome(sourceId: string): HomeSection[] | null {
 export function writeCachedHome(sourceId: string, sections: HomeSection[]): void {
   if (!Array.isArray(sections) || sections.length === 0) return;
   try {
-    const db = openDb();
-    if (!db) return;
-
-    const payload = JSON.stringify(sections);
-    const now = Date.now();
-    db.prepare(`
-      INSERT INTO home (source_id, payload, cached_at)
-      VALUES (?, ?, ?)
-      ON CONFLICT(source_id) DO UPDATE SET
-        payload = excluded.payload,
-        cached_at = excluded.cached_at
-    `).run(sourceId, payload, now);
+    const filePath = getHomeCachePath(sourceId);
+    const data = {
+      cachedAt: Date.now(),
+      sections,
+    };
+    atomicWriteFileSync(filePath, JSON.stringify(data, null, 2));
   } catch (err: any) {
-    console.warn('[chapter-cache] Write home failed:', err?.message || err);
+    console.warn(`[chapter-cache] Write home failed for ${sourceId}:`, err?.message || err);
   }
 }
 
@@ -647,31 +617,247 @@ export async function fetchHomeWithCache(
   inFlightHome.set(sourceId, promise);
   try {
     const sections = await promise;
-    if (Array.isArray(sections) && sections.length > 0) {
-      writeCachedHome(sourceId, sections);
-    }
+    writeCachedHome(sourceId, sections);
     return { sections, cached: false };
   } catch (err: any) {
-    // If upstream fetch fails, try to fallback to stale cache if present
-    try {
-      const db = openDb();
-      if (db) {
-        const row = db.prepare('SELECT payload FROM home WHERE source_id = ?').get(sourceId) as
-          | { payload: string }
-          | undefined;
-        if (row?.payload) {
-          const parsed = JSON.parse(row.payload);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            console.warn(`[chapter-cache] Serving stale home cache for ${sourceId} after fetch error`);
-            return { sections: parsed, cached: true };
-          }
-        }
-      }
-    } catch {
-      // Ignore
+    // If upstream fetch fails, try serving stale cache
+    const stale = readCachedHome(sourceId);
+    if (stale) {
+      console.warn(`[chapter-cache] Serving stale home cache for ${sourceId} after fetch error`);
+      return { sections: stale, cached: true };
     }
     throw err;
   } finally {
     inFlightHome.delete(sourceId);
   }
+}
+
+export interface ChapterCacheStats {
+  entries: number;
+  dbPath: string;
+  maxEntries: number;
+  ttlMs: number;
+  enabled: boolean;
+  diskBytes: number;
+  payloadBytes: number;
+}
+
+/** Cached stats calculation with 5-second throttling */
+let lastStatsTime = 0;
+let cachedStats: ChapterCacheStats = {
+  entries: 0,
+  dbPath: STORAGE_DIR,
+  maxEntries: 0,
+  ttlMs: 0,
+  enabled: true,
+  diskBytes: 0,
+  payloadBytes: 0,
+};
+
+function calculateStats(): ChapterCacheStats {
+  const now = Date.now();
+  if (now - lastStatsTime < 5000) {
+    return cachedStats;
+  }
+
+  try {
+    if (!existsSync(STORAGE_DIR)) {
+      mkdirSync(STORAGE_DIR, { recursive: true });
+    }
+
+    let entries = 0;
+    let totalBytes = 0;
+
+    const walk = (dir: string) => {
+      const items = readdirSync(dir, { withFileTypes: true });
+      for (const item of items) {
+        const full = join(dir, item.name);
+        if (item.isDirectory()) {
+          walk(full);
+        } else if (item.isFile()) {
+          totalBytes += statSync(full).size;
+          if (item.name.endsWith('.txt')) {
+            entries++;
+          }
+        }
+      }
+    };
+
+    walk(STORAGE_DIR);
+
+    cachedStats = {
+      entries,
+      dbPath: STORAGE_DIR,
+      maxEntries: 0, // 0 = permanent
+      ttlMs: 0, // 0 = permanent
+      enabled: true,
+      diskBytes: totalBytes,
+      payloadBytes: totalBytes,
+    };
+    lastStatsTime = now;
+  } catch (err: any) {
+    console.warn('[chapter-cache] Failed to calculate stats:', err?.message || err);
+    cachedStats.enabled = false;
+  }
+
+  return cachedStats;
+}
+
+export function getChapterCacheStats(): ChapterCacheStats {
+  return calculateStats();
+}
+
+export interface BackgroundCacheTaskStatus {
+  status: 'running' | 'completed' | 'error';
+  total: number;
+  completed: number;
+}
+
+interface CacheTask {
+  status: 'running' | 'completed' | 'error';
+  total: number;
+  completed: number;
+  abortController: AbortController;
+  startTime: number;
+}
+
+const activeCacheTasks = new Map<string, CacheTask>();
+
+export function getBackgroundCacheStatus(
+  sourceId: string,
+  bookId: string
+): BackgroundCacheTaskStatus | null {
+  const taskKey = `${sourceId}::${bookId}`;
+  const task = activeCacheTasks.get(taskKey);
+  if (!task) return null;
+  return {
+    status: task.status,
+    total: task.total,
+    completed: task.completed,
+  };
+}
+
+export function stopBackgroundBookCache(sourceId: string, bookId: string): boolean {
+  const taskKey = `${sourceId}::${bookId}`;
+  const task = activeCacheTasks.get(taskKey);
+  if (task && task.status === 'running') {
+    task.abortController.abort();
+    activeCacheTasks.delete(taskKey);
+    return true;
+  }
+  return false;
+}
+
+export async function startBackgroundBookCache(
+  sourceId: string,
+  bookId: string
+): Promise<{
+  status: 'running' | 'completed' | 'error';
+  total: number;
+  completed: number;
+  alreadyRunning: boolean;
+}> {
+  const taskKey = `${sourceId}::${bookId}`;
+  const existing = activeCacheTasks.get(taskKey);
+  if (existing && existing.status === 'running') {
+    return {
+      status: 'running',
+      total: existing.total,
+      completed: existing.completed,
+      alreadyRunning: true,
+    };
+  }
+
+  const { sourceRegistry } = await import('@/sources');
+  const source = sourceRegistry.getSource(sourceId);
+  const { detail } = await fetchBookWithCache(source.meta.id, bookId, () =>
+    source.getDetail(bookId)
+  );
+
+  if (!detail || !detail.chapters || detail.chapters.length === 0) {
+    throw new Error('未找到书籍章节列表');
+  }
+
+  const alreadyCached = new Set(getCachedChapterIds(source.meta.id, bookId));
+  const uncached = detail.chapters.filter((ch) => !alreadyCached.has(ch.id));
+
+  if (uncached.length === 0) {
+    return {
+      status: 'completed',
+      total: detail.chapters.length,
+      completed: detail.chapters.length,
+      alreadyRunning: false,
+    };
+  }
+
+  const abortController = new AbortController();
+  const task: CacheTask = {
+    status: 'running',
+    total: detail.chapters.length,
+    completed: alreadyCached.size,
+    abortController,
+    startTime: Date.now(),
+  };
+  activeCacheTasks.set(taskKey, task);
+
+  // Helper for abortable delay
+  const abortableDelay = (ms: number, signal: AbortSignal): Promise<void> => {
+    return new Promise((resolve) => {
+      if (signal.aborted) return resolve();
+      const timer = setTimeout(resolve, ms);
+      signal.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timer);
+          resolve();
+        },
+        { once: true }
+      );
+    });
+  };
+
+  // Background caching loop with 2-5s random delay per chapter to prevent anti-crawler bans
+  (async () => {
+    try {
+      for (let i = 0; i < uncached.length; i++) {
+        if (abortController.signal.aborted) break;
+
+        const ch = uncached[i];
+        try {
+          await fetchChapterWithCache(source.meta.id, bookId, ch.id, () =>
+            source.getChapter(bookId, ch.id)
+          );
+          task.completed++;
+        } catch (err: any) {
+          console.warn(
+            `[chapter-cache] Background cache failed for ${source.meta.id}/${bookId}/${ch.id}:`,
+            err?.message || err
+          );
+        }
+
+        // Random delay between 2000ms and 5000ms before requesting the next chapter
+        if (i < uncached.length - 1 && !abortController.signal.aborted) {
+          const randomDelay = Math.floor(Math.random() * 3000) + 2000;
+          await abortableDelay(randomDelay, abortController.signal);
+        }
+      }
+      task.status = 'completed';
+    } catch (err: any) {
+      console.error('[chapter-cache] Background task error:', err);
+      task.status = 'error';
+    } finally {
+      setTimeout(() => {
+        if (activeCacheTasks.get(taskKey) === task) {
+          activeCacheTasks.delete(taskKey);
+        }
+      }, 60000);
+    }
+  })();
+
+  return {
+    status: 'running',
+    total: detail.chapters.length,
+    completed: alreadyCached.size,
+    alreadyRunning: false,
+  };
 }

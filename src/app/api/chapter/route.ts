@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sourceRegistry } from '@/sources';
 import { fetchChapterWithCache } from '@/lib/chapter-cache';
 
-// The relay cache uses `node:sqlite`, which exists only on the Node.js runtime.
+// The chapter cache uses Node.js filesystem APIs.
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {

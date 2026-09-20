@@ -89,7 +89,7 @@ export default function ReaderPage() {
 
   if (loading && !chapter) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafafa] text-zinc-800">
+      <div className="min-h-screen flex flex-col items-center justify-center text-zinc-800">
         <div className="w-9 h-9 border-2 border-black border-t-transparent rounded-full animate-spin mb-3" />
         <h3 className="font-bold text-sm mb-1 tracking-tight">正在净化排版并加载正文...</h3>
         <p className="text-xs text-zinc-400 font-mono">无广告过滤 · 章节智能拼接</p>
@@ -99,7 +99,7 @@ export default function ReaderPage() {
 
   if (error || !chapter) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#fafafa] text-zinc-900">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 text-zinc-900">
         <div className="max-w-md w-full bg-white p-6 rounded-xl shadow-sm border border-zinc-200 text-center space-y-4">
           <div className="w-10 h-10 mx-auto rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold text-base">
             !

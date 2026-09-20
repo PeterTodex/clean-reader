@@ -81,7 +81,7 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({
         {/* Header */}
         <div className="p-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
           <h3 className="font-bold text-base text-zinc-950 flex items-center gap-2">
-            <Bookmark className="w-4 h-4 text-black" />
+            <Bookmark className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />
             书签与批注管理
             <span className="text-xs font-mono font-normal text-zinc-400">（共 {bookmarks.length} 条）</span>
           </h3>

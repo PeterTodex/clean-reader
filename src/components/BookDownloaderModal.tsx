@@ -324,10 +324,10 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5 font-medium text-xs text-zinc-900">
-                        <BookOpen className="w-4 h-4 text-black" />
+                        <BookOpen className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />
                         全本下载
                       </div>
-                      {mode === 'all' && <Check className="w-4 h-4 text-black" />}
+                      {mode === 'all' && <Check className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />}
                     </div>
                     <p className="text-[11px] text-zinc-500 font-mono">全部 {totalChapters} 章</p>
                   </button>
@@ -343,10 +343,10 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5 font-medium text-xs text-zinc-900">
-                        <Layers className="w-4 h-4 text-black" />
+                        <Layers className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />
                         指定范围
                       </div>
-                      {mode === 'range' && <Check className="w-4 h-4 text-black" />}
+                      {mode === 'range' && <Check className="w-4 h-4 text-zinc-900 dark:text-zinc-100" />}
                     </div>
                     <p className="text-[11px] text-zinc-500 font-mono">自定义起止章节</p>
                   </button>
@@ -427,7 +427,7 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
               {/* Format features badges */}
               <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 text-xs text-zinc-600 space-y-1">
                 <div className="flex items-center gap-1.5 font-medium text-zinc-900 mb-1">
-                  <Sparkles className="w-3.5 h-3.5 text-black" />
+                  <Sparkles className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-100" />
                   TXT 格式化特性
                 </div>
                 <div className="grid grid-cols-2 gap-1 text-[11px] text-zinc-500 font-mono">
@@ -467,9 +467,9 @@ export const BookDownloaderModal: React.FC<BookDownloaderModalProps> = ({
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-zinc-600 font-medium">
                   <span>
-                    已解析: <strong className="text-black font-bold font-mono">{progress.current}</strong> / {progress.total} 章
+                    已解析: <strong className="text-zinc-950 dark:text-zinc-50 font-bold font-mono">{progress.current}</strong> / {progress.total} 章
                   </span>
-                  <span className="font-mono text-black font-bold">{progress.percent}%</span>
+                  <span className="font-mono text-zinc-950 dark:text-zinc-50 font-bold">{progress.percent}%</span>
                 </div>
 
                 <div className="w-full bg-zinc-100 rounded-full h-3 overflow-hidden border border-zinc-200 p-0.5">

@@ -23,7 +23,7 @@ export default function BookshelfPage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fafafa]">
+    <div className="min-h-screen flex flex-col transition-colors duration-200">
       <Header onSearchFocus={() => router.push('/')} />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 sm:py-10 space-y-8">
@@ -79,26 +79,6 @@ export default function BookshelfPage() {
           />
         )}
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-zinc-200 py-6 text-center text-xs text-zinc-400 mt-auto bg-white">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2 font-mono">
-          <span>清阅 · 个人极简小说阅读器</span>
-          <div className="flex items-center gap-4">
-            <Link href="/" className="hover:text-zinc-800 transition-colors">
-              首页发现
-            </Link>
-            <span>·</span>
-            <Link href="/history" className="hover:text-zinc-800 transition-colors">
-              阅读历史
-            </Link>
-            <span>·</span>
-            <Link href="/sources" className="hover:text-zinc-800 transition-colors">
-              书源引擎
-            </Link>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

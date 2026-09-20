@@ -49,7 +49,7 @@ export default function SourcesPage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fafafa]">
+    <div className="min-h-screen flex flex-col transition-colors duration-200">
       <Header />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8 space-y-8">
@@ -127,7 +127,7 @@ export default function SourcesPage() {
 
             {/* Chapter cache */}
             <section className="space-y-3">
-              <h2 className="text-xs font-semibold text-zinc-500 font-mono">章节中转缓存</h2>
+              <h2 className="text-xs font-semibold text-zinc-500 font-mono">本地书库与章节缓存</h2>
               <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
                 {!stats?.enabled ? (
                   <div className="flex items-start gap-2.5 text-xs text-zinc-500">
@@ -135,7 +135,7 @@ export default function SourcesPage() {
                     <div>
                       <p className="font-medium text-zinc-700">缓存未启用</p>
                       <p className="mt-1 leading-relaxed">
-                        需要 Node 22.5 及以上（`node:sqlite`），或缓存目录不可写。详见服务端启动日志。
+                        缓存目录不可写。详见服务端启动日志。
                       </p>
                     </div>
                   </div>
@@ -146,8 +146,7 @@ export default function SourcesPage() {
                       <dd className="text-lg font-bold text-zinc-950 font-mono mt-0.5">
                         {stats.entries.toLocaleString()}
                         <span className="text-xs font-normal text-zinc-400">
-                          {' '}
-                          / {stats.maxEntries.toLocaleString()}
+                          {stats.maxEntries > 0 ? ` / ${stats.maxEntries.toLocaleString()}` : ' （永久保存）'}
                         </span>
                       </dd>
                     </div>
@@ -160,7 +159,7 @@ export default function SourcesPage() {
                     <div>
                       <dt className="text-[11px] font-mono text-zinc-400">有效期</dt>
                       <dd className="text-lg font-bold text-zinc-950 font-mono mt-0.5">
-                        {Math.round(stats.ttlMs / 86400000)} 天
+                        {stats.ttlMs > 0 ? `${Math.round(stats.ttlMs / 86400000)} 天` : '永久保存'}
                       </dd>
                     </div>
                   </dl>

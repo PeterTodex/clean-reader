@@ -102,32 +102,22 @@ export const isDefault = true;
 
 适配器同时返回 `content`（用 `<p>` 拼接的 HTML 字符串）与 `paragraphs`（数组）。`ReaderView` 通过 `dangerouslySetInnerHTML` 逐段渲染的是 **`paragraphs`** —— 阅读器并不使用 `content`。适配器是唯一的净化层，因此在那里新增的任何处理都必须在返回前剥离 script/style/标签。
 
-## 服务端章节中转缓存
+## 本地书库与章节文件缓存
 
-`src/lib/chapter-cache.ts` 把服务端变成**中转站**：某章节第一次被请求时抓取第三方并落库，之后所有请求（无论来自哪个浏览器）都直接由本地 SQLite 返回，不再打源站。没有用户概念，键是全局的 `(sourceId, bookId, chapterId)`。
+`src/lib/chapter-cache.ts` 把服务端变成**本地书库与中转缓存**：某章节第一次被请求时抓取第三方并以标准文本文件落盘，之后所有请求（无论来自哪个浏览器）都直接由本地文件系统返回，不再打源站。
 
-- **存储是 `node:sqlite`**（Node ≥ 22.5 的内置模块，`package.json` 的 `engines` 已声明）。零新依赖。库文件在 `.cache/clean-reader.db`，已被 gitignore，可用 `CLEAN_READER_CACHE_DB` 覆盖路径。
-- **必须写 `import ... from 'node:sqlite'`**。`module.builtinModules` 里只有带前缀的形式，裸名 `sqlite` 不存在，写成裸名会直接解析失败。
-- **单例连接缓存在 `globalThis` 上**，避免 `next dev` 热重载反复打开句柄导致泄漏。
-- **键用解析后的 `source.meta.id`**，不是 URL 上的原始 `sourceId`。`getSource()` 在 id 未知时会回退到默认书源，若用原始 id 作键，`?source=已删除的源` 会把内容错误地写到那个不存在的 id 下。
-- **缓存键只含 `(sourceId, bookId, chapterId)`**：书源只有一个地址，没有镜像维度需要区分。
-- **质量闸门（最关键的一点）**：`paragraphs` 为空或正文短于 100 字符时**拒绝写入**，抓取抛错时也不写。在共享缓存里一条坏数据不是一次坏响应，而是**所有后续用户在整个 TTL 内都会命中的坏响应**。
-- **并发防击穿**：模块级 `Map` 做 in-flight 去重，`/api/chapter` 与 TXT 导出共享同一个 Map，所以两条路径也能互相去重。promise 在 `finally` 中清理——遗漏这条会让一次失败永久毒化该章节。
-- TTL 默认 30 天（正文实际不可变，TTL 是给漏放坏数据自愈用的）；容量上限默认 2000 章，按 `last_access` 淘汰。**实测单章约 121KB（UTF-8 字节）**，2000 章约 240MB。两者分别可用 `CLEAN_READER_CACHE_TTL_MS`、`CLEAN_READER_CACHE_MAX_ENTRIES` 覆盖。
-  - 量体积时注意：SQLite 的 `length()` 作用于 TEXT 返回的是**字符数**，中文下比字节数小约 3 倍，用它做容量估算会严重低估。
-  - payload 里约一半是 `content` 字段（`paragraphs` 的 HTML 拼接，两个适配器都写 `paragraphs.map(p => \`<p>${p}</p>\`).join('\n')`），而**全项目没有任何地方读它**。存全量是为了让缓存命中与未命中返回形状完全一致——要省这一半空间就得接受"命中时的 `content` 由缓存重算"，并把它变成适配器必须遵守的约定。
-- `last_access` 采用**粗粒度更新**（距上次超过 1 小时才写）。这不是可选的优化：WAL 的写入单位是 4KB 页，每次命中都 touch 会让读路径产生与命中率成正比的磁盘写与锁竞争，且发生在最需要低延迟的地方。
-- **`schema_version` 列**：`payload` 存的是序列化对象，给 `ChapterContent` 增删字段后**旧行仍能 `JSON.parse` 成功**，只是缺字段——类型断言骗过编译器、渲染空白页、没有任何日志指向缓存。任何改动 `ChapterContent` 形状的提交都必须同时递增 `SCHEMA_VERSION`，不匹配的行在首次被读到时自动删除重取。
-- **`busy_timeout` 默认是 0**，即锁冲突立即抛 `SQLITE_BUSY` 而不等待。适配器构造时已显式传 `{ timeout: 5000 }`；少了它，多进程共用同一库文件时偶发的锁冲突会被 catch 成"缓存未命中"，**缓存收益在最需要的时候静默消失**。
-- 打不开库（只读文件系统等）会**闩锁**并只告警一次，避免每个请求都重试并刷屏日志。
+- **存储结构**：纯文件系统存储，位于 `.cache/books/`（已被 gitignore，可用 `CLEAN_READER_STORAGE_DIR` 覆盖路径）。
+  - `[sourceId]/[safeTitle]_[bookId]/meta.json`：书籍元数据（作者、简介、状态、封面地址等）。
+  - `[sourceId]/[safeTitle]_[bookId]/toc.json`：完整章节目录与物理文件名映射索引表。
+  - `[sourceId]/[safeTitle]_[bookId]/chapters/0001_第一章.txt`：4位前导零序号与清洗后的章节名，第一行为标题，后续行为自然段落。
+  - `_home/[sourceId].json`：书源首页推荐分区缓存。
+- **并发与原子写入**：使用写入 `.tmp` 临时文件再 `fs.renameSync` 的原子替换方案，杜绝高并发或进程中断导致的半写坏文件；内存中维持 `inFlight` Map 进行并发请求去重。
+- **持久保留**：本地书库模式，已下载与阅读过的书籍章节永久保留在磁盘，不自动删除，便于通过文件系统/NAS/Samba 直观管理与阅读。
+- **质量闸门**：`paragraphs` 为空或正文短于 100 字符时拒绝写入，避免源站拦截或报错内容污染本地书库。
 
-**两个接入点**：`src/app/api/chapter/route.ts`（响应头带 `X-Cache: HIT|MISS`，便于用 curl 验证）与 `src/app/api/export/txt/route.ts` 的 `fetchChapterWithRetry`（整本导出会连续拉几百章，是收益最大的复用点）。
+**接入点**：`src/app/api/chapter/route.ts`（响应头带 `X-Cache: HIT|MISS`）、`src/app/api/book/route.ts` 与 `src/app/api/export/txt/route.ts`。
 
-**服务端专属**：`chapter-cache.ts` 引入了 `node:sqlite`，绝不能出现在 `'use client'` 文件中。项目未装 `server-only` 包，这条约束与 `axios`/`cheerio` 一样仅靠约定维持。
-
-**部署限制**：面向自托管单实例。只读文件系统（如 Vercel 等 serverless）下缓存不可用；多实例部署时各实例持有独立缓存，不会共享。
-
-`node:sqlite` 的类型是手写的（`src/types/node-sqlite.d.ts`），因为项目固定在 `@types/node@^20`，该版本早于 `node:sqlite`。若将 `@types/node` 升到 ≥ 22，应删掉那个文件。
+**服务端专属**：`chapter-cache.ts` 使用 Node.js `node:fs` / `node:path`，绝不能出现在 `'use client'` 文件中。项目未装 `server-only` 包，这条约束与 `axios`/`cheerio` 一样仅靠约定维持。
 
 ## 客户端状态
 
