@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sourceRegistry } from '@/sources';
 import { ChapterItem } from '@/sources/types';
 import { fetchChapterWithCache } from '@/lib/chapter-cache';
+import { stripHtml } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes max duration
@@ -41,30 +42,10 @@ const AD_PATTERNS: RegExp[] = [
 ];
 
 function cleanParagraph(raw: string): string {
-  if (!raw) return '';
-
-  // 1. Strip scripts, styles, and HTML tags
-  let text = raw
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, '');
-
-  // 2. Decode standard HTML entities
-  text = text
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&mdash;/gi, '—')
-    .replace(/&hellip;/gi, '…');
-
-  // 3. Trim whitespace
-  text = text.replace(/^[\s\u3000\u00A0]+/, '').replace(/[\s\u3000\u00A0]+$/, '');
+  const text = stripHtml(raw);
   if (!text) return '';
 
-  // 4. Filter ads
+  // Filter ads
   for (const pattern of AD_PATTERNS) {
     if (pattern.test(text)) {
       return '';

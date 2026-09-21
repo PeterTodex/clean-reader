@@ -30,7 +30,6 @@ export interface ReaderSettings {
   lineHeight: number;
   fontFamily: 'serif' | 'sans' | 'kaiti';
   maxWidth?: number;
-  readingMode?: 'scroll' | 'page';
   autoPreloadNext: boolean;
 }
 
@@ -56,7 +55,6 @@ const STORAGE_KEYS = {
   BOOKSHELF: 'clean_reader_bookshelf',
   HISTORY: 'clean_reader_history',
   SETTINGS: 'clean_reader_settings',
-  ACTIVE_SOURCE: 'clean_reader_source',
   BOOKMARKS: 'clean_reader_bookmarks',
 };
 

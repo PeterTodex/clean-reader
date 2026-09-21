@@ -13,6 +13,7 @@ import {
   Headphones,
   AlertCircle,
 } from 'lucide-react';
+import { stripHtml } from '@/lib/utils';
 
 interface TtsPlayerProps {
   paragraphs: string[];
@@ -25,18 +26,6 @@ interface TtsPlayerProps {
   onParagraphChange: (index: number) => void;
 }
 
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .trim();
-}
 
 export const TtsPlayer: React.FC<TtsPlayerProps> = ({
   paragraphs,

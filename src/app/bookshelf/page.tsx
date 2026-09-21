@@ -5,35 +5,17 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Bookshelf } from '@/components/Bookshelf';
+import { BookCard } from '@/components/BookCard';
 import { SearchModal } from '@/components/SearchModal';
-import { BookCoverPlaceholder } from '@/components/BookCoverPlaceholder';
 import { BookshelfItem, HistoryItem, storage } from '@/lib/storage';
+import { formatRelativeTime } from '@/lib/utils';
 import {
   Library,
   Clock,
   ArrowLeft,
-  Search,
-  RefreshCw,
   Trash2,
   BookOpen,
-  ArrowRight,
-  Plus,
-  Check,
 } from 'lucide-react';
-
-function formatRelativeTime(timestamp: number): string {
-  const diff = Date.now() - timestamp;
-  const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return '刚刚';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}分钟前`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}小时前`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}天前`;
-  const date = new Date(timestamp);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
 
 type TabType = 'shelf' | 'history';
 
@@ -220,110 +202,16 @@ function BookshelfContent() {
             </div>
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
-              {historyItems.map((book) => {
-                const readHref = book.lastChapterId
-                  ? `/read/${book.id}/${book.lastChapterId}?source=${book.sourceId}`
-                  : `/book/${book.id}?source=${book.sourceId}`;
-                const isSavedInShelf = shelfBookIds.has(`${book.sourceId}-${book.id}`);
-
-                return (
-                  <div
-                    key={`${book.sourceId}-${book.id}`}
-                    className="group relative flex flex-col"
-                  >
-                    {/* Cover */}
-                    <Link
-                      href={readHref}
-                      className="relative aspect-[4/5] w-full bg-zinc-100 rounded-lg overflow-hidden block"
-                    >
-                      <BookCoverPlaceholder title={book.title} className="absolute inset-0" />
-                      {book.cover ? (
-                        <img
-                          src={book.cover}
-                          alt={book.title}
-                          className="relative w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          onError={(e) => {
-                            (e.target as HTMLElement).style.display = 'none';
-                          }}
-                        />
-                      ) : null}
-
-                      {/* Time badge */}
-                      <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 px-1 sm:px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-xs text-white text-[9px] sm:text-[10px] font-mono">
-                        {formatRelativeTime(book.lastReadTime)}
-                      </div>
-
-                      {/* Hover Continue overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2 sm:p-2.5">
-                        <span className="text-white text-[10px] sm:text-xs font-medium flex items-center gap-1 font-mono">
-                          继续阅读 <ArrowRight className="w-3 h-3" />
-                        </span>
-                      </div>
-                    </Link>
-
-                    {/* Info */}
-                    <div className="pt-2 flex-1 flex flex-col justify-between">
-                      <div>
-                        <Link href={`/book/${book.id}?source=${book.sourceId}`} className="block">
-                          <h4 className="font-medium text-zinc-900 text-xs sm:text-sm line-clamp-1 group-hover:text-black transition-colors">
-                            {book.title}
-                          </h4>
-                        </Link>
-                        <p className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 line-clamp-1">
-                          {book.author || '佚名'}
-                        </p>
-                      </div>
-
-                      <div className="mt-2">
-                        {/* Last Read Chapter + Progress */}
-                        <div className="text-[10px] sm:text-[11px] text-zinc-500 font-mono truncate flex items-center justify-between">
-                          <span className="truncate flex-1">{book.lastChapterTitle || '阅读进度'}</span>
-                          {book.progressPercent !== undefined && (
-                            <span className="shrink-0 font-bold ml-1 text-zinc-800">
-                              {book.progressPercent}%
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Actions: Add to shelf + Delete */}
-                        <div className="flex items-center justify-between pt-1.5 border-t border-zinc-100 text-xs gap-1 mt-1.5">
-                          <button
-                            type="button"
-                            onClick={(e) => handleToggleShelf(e, book)}
-                            className={`px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-medium transition-colors flex items-center gap-1 shrink-0 ${
-                              isSavedInShelf
-                                ? 'bg-zinc-100 text-zinc-600 hover:text-red-600'
-                                : 'bg-black text-white hover:bg-zinc-800'
-                            }`}
-                            title={isSavedInShelf ? '移出书架' : '加入书架'}
-                          >
-                            {isSavedInShelf ? (
-                              <>
-                                <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                <span>在书架</span>
-                              </>
-                            ) : (
-                              <>
-                                <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                <span>加书架</span>
-                              </>
-                            )}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={(e) => handleRemoveHistoryItem(e, book.id, book.sourceId)}
-                            className="text-zinc-400 hover:text-red-600 p-0.5 sm:p-1 rounded transition-colors shrink-0"
-                            title="删除足迹记录"
-                          >
-                            <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              {historyItems.map((book) => (
+                <BookCard
+                  key={`${book.sourceId}-${book.id}`}
+                  book={book}
+                  variant="history"
+                  isOnShelf={shelfBookIds.has(`${book.sourceId}-${book.id}`)}
+                  onToggleShelf={(e) => handleToggleShelf(e, book)}
+                  onRemoveFromHistory={(e) => handleRemoveHistoryItem(e, book.id, book.sourceId)}
+                />
+              ))}
             </div>
           )
         )}

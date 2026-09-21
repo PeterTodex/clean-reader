@@ -2,24 +2,20 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { ChapterContent, ChapterItem } from '@/sources/types';
 import { ReaderSettings, storage } from '@/lib/storage';
 import { THEME_CHANGE_EVENT, ThemeType } from '@/lib/theme';
+import { useReaderKeyboard, useReadingProgress } from '@/hooks';
 import { ReaderSettingsModal } from './ReaderSettingsModal';
 import { ChapterDrawer } from './ChapterDrawer';
 import { BookContentSearchModal } from './BookContentSearchModal';
 import { TtsPlayer } from './TtsPlayer';
 import {
   ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
   List,
   SlidersHorizontal,
-  BookOpen,
   X,
   Bookmark,
-  BookmarkCheck,
 } from 'lucide-react';
 
 interface ReaderViewProps {
@@ -41,9 +37,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   sourceId,
   initialCachedChapterIds,
 }) => {
-  const router = useRouter();
   const [chaptersList, setChaptersList] = useState<ChapterContent[]>([initialChapter]);
-  const [activeChapterIndex, setActiveChapterIndex] = useState(0);
   const [isLoadingNext, setIsLoadingNext] = useState(false);
   const [settings, setSettings] = useState<ReaderSettings>(storage.getSettings());
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -55,7 +49,6 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const [showControls, setShowControls] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [switchingChapter, setSwitchingChapter] = useState<{ id: string; title: string } | null>(null);
-  const [readingProgress, setReadingProgress] = useState(0);
   const [isCurrentBookmarked, setIsCurrentBookmarked] = useState(false);
   const [bookmarkToast, setBookmarkToast] = useState<string | null>(null);
   const restoredScrollRef = useRef<Record<string, boolean>>({});
@@ -64,6 +57,64 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     const set = new Set<string>(initialCachedChapterIds || []);
     if (initialChapter?.id) set.add(initialChapter.id);
     return set;
+  });
+
+  // In-memory cache for chapters to make transitions instant
+  const chapterCacheRef = useRef<Map<string, ChapterContent>>(new Map());
+  const containerRef = useRef<HTMLDivElement>(null);
+  const paragraphRefs = useRef<(HTMLParagraphElement | null)[]>([]);
+  const targetScrollChapterIdRef = useRef<string | null>(null);
+
+  // Seamless continuous reading: auto load and append next chapter
+  const loadNextChapter = useCallback(async () => {
+    if (isLoadingNext) return;
+    const currentLast = chaptersList[chaptersList.length - 1];
+    if (!currentLast) return;
+
+    let nextId = currentLast.nextChapterId;
+    if (!nextId && chapters.length > 0) {
+      const idx = chapters.findIndex((c) => String(c.id) === String(currentLast.id));
+      if (idx !== -1 && idx < chapters.length - 1) {
+        nextId = chapters[idx + 1].id;
+      }
+    }
+    if (!nextId || chaptersList.some((c) => c.id === nextId)) return;
+
+    setIsLoadingNext(true);
+    try {
+      if (chapterCacheRef.current.has(nextId)) {
+        const cached = chapterCacheRef.current.get(nextId)!;
+        setChaptersList((prev) => [...prev, cached]);
+        return;
+      }
+
+      const res = await fetch(
+        `/api/chapter?bookId=${currentLast.bookId}&chapterId=${nextId}&source=${sourceId}`
+      );
+      const data = await res.json();
+      if (data.success && data.data) {
+        chapterCacheRef.current.set(nextId, data.data);
+        setCachedChapterIds((prev) => new Set(prev).add(nextId));
+        setChaptersList((prev) => [...prev, data.data]);
+      }
+    } catch {
+      // Silently ignore
+    } finally {
+      setIsLoadingNext(false);
+    }
+  }, [chaptersList, isLoadingNext, sourceId, chapters]);
+
+  // Reading progress and scroll tracking hook
+  const {
+    readingProgress,
+    activeChapterIndex,
+    setActiveChapterIndex,
+    setReadingProgress,
+  } = useReadingProgress({
+    chaptersList,
+    switchingChapter,
+    loadNextChapter,
+    sourceId,
   });
 
   useEffect(() => {
@@ -88,19 +139,27 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     return () => window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange);
   }, []);
 
-  // In-memory cache for chapters to make transitions instant
-  const chapterCacheRef = useRef<Map<string, ChapterContent>>(new Map());
-  const containerRef = useRef<HTMLDivElement>(null);
-  const paragraphRefs = useRef<(HTMLParagraphElement | null)[]>([]);
-
   // Derived current active and last loaded chapters
   const chapter = chaptersList[activeChapterIndex] || chaptersList[0] || initialChapter;
   const lastChapter = chaptersList[chaptersList.length - 1] || chapter;
+
+  // Fallback next and prev chapter IDs from full book TOC if not provided by source/cache
+  const currentChapterIdxInBook = useMemo(() => {
+    return chapters.findIndex((c) => String(c.id) === String(chapter.id));
+  }, [chapters, chapter.id]);
+
+  const fallbackNextId =
+    currentChapterIdxInBook !== -1 && currentChapterIdxInBook < chapters.length - 1
+      ? chapters[currentChapterIdxInBook + 1]?.id
+      : null;
+  const fallbackPrevId =
+    currentChapterIdxInBook > 0 ? chapters[currentChapterIdxInBook - 1]?.id : null;
+
   const prevChapterId =
     activeChapterIndex > 0
       ? chaptersList[activeChapterIndex - 1].id
-      : chaptersList[0]?.prevChapterId || null;
-  const nextChapterId = chapter.nextChapterId;
+      : chaptersList[0]?.prevChapterId || fallbackPrevId;
+  const nextChapterId = chapter.nextChapterId || fallbackNextId;
 
   // Relative chapter navigation IDs when switching to un-cached chapter
   const switchingChapterIndex = switchingChapter
@@ -151,14 +210,23 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     [highlightKeyword]
   );
 
-  // Auto-scroll to first highlighted keyword match when arriving in chapter
+  // Auto-scroll to first highlighted keyword match ONLY ONCE when arriving in the target chapter
   useEffect(() => {
-    if (!highlightKeyword) return;
+    if (!highlightKeyword || !targetScrollChapterIdRef.current) return;
+    const targetId = targetScrollChapterIdRef.current;
+
+    // Only scroll if target chapter is currently active and not in loading skeleton
+    if (chapter.id !== targetId || switchingChapter) return;
+
     const timer = setTimeout(() => {
-      const firstMark = document.querySelector('mark.highlight-search-kw');
+      // Scope query strictly to the target chapter's section, NEVER globally query document
+      const sectionEl = document.getElementById(`chapter-section-${targetId}`);
+      const firstMark = sectionEl?.querySelector('mark.highlight-search-kw');
       if (firstMark) {
         firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
+      // Consume the target so scrolling to next chapters will NEVER bounce back
+      targetScrollChapterIdRef.current = null;
     }, 280);
     return () => clearTimeout(timer);
   }, [highlightKeyword, chapter.id, switchingChapter]);
@@ -169,7 +237,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     setActiveChapterIndex(0);
     chapterCacheRef.current.set(initialChapter.id, initialChapter);
     setCachedChapterIds((prev) => new Set(prev).add(initialChapter.id));
-  }, [initialChapter.id]);
+  }, [initialChapter.id, setActiveChapterIndex]);
 
   // Sync settings
   const handleUpdateSettings = (newSettings: Partial<ReaderSettings>) => {
@@ -286,43 +354,14 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     }
   }, [lastChapter?.nextChapterId, settings.autoPreloadNext, prefetchChapter]);
 
-  // Seamless continuous reading: auto load and append next chapter
-  const loadNextChapter = useCallback(async () => {
-    if (isLoadingNext) return;
-    const currentLast = chaptersList[chaptersList.length - 1];
-    if (!currentLast || !currentLast.nextChapterId) return;
-
-    const nextId = currentLast.nextChapterId;
-    if (chaptersList.some((c) => c.id === nextId)) return;
-
-    setIsLoadingNext(true);
-    try {
-      if (chapterCacheRef.current.has(nextId)) {
-        const cached = chapterCacheRef.current.get(nextId)!;
-        setChaptersList((prev) => [...prev, cached]);
-        return;
-      }
-
-      const res = await fetch(
-        `/api/chapter?bookId=${currentLast.bookId}&chapterId=${nextId}&source=${sourceId}`
-      );
-      const data = await res.json();
-      if (data.success && data.data) {
-        chapterCacheRef.current.set(nextId, data.data);
-        setCachedChapterIds((prev) => new Set(prev).add(nextId));
-        setChaptersList((prev) => [...prev, data.data]);
-      }
-    } catch {
-      // Silently ignore
-    } finally {
-      setIsLoadingNext(false);
-    }
-  }, [chaptersList, isLoadingNext, sourceId]);
-
   // Load / jump to a chapter by id
   const navigateToChapter = useCallback(
     async (targetChapterId: string) => {
       if (!targetChapterId || isLoading) return;
+
+      if (targetScrollChapterIdRef.current && targetScrollChapterIdRef.current !== targetChapterId) {
+        targetScrollChapterIdRef.current = null;
+      }
 
       // 1. If the chapter is already rendered in continuous chaptersList, smoothly scroll to it
       const existingIdx = chaptersList.findIndex((c) => c.id === targetChapterId);
@@ -385,7 +424,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         setIsLoading(false);
       }
     },
-    [chaptersList, chapter.bookId, chapters, sourceId, isLoading]
+    [chaptersList, chapter.bookId, chapters, sourceId, isLoading, setActiveChapterIndex, setReadingProgress]
   );
 
   // TTS next chapter auto trigger
@@ -395,112 +434,16 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     }
   }, [chapter.nextChapterId, navigateToChapter]);
 
-  // Fullscreen toggle (keyboard 'f')
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  };
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      if (e.key === 'ArrowLeft' && currentPrevChapterId) {
-        navigateToChapter(currentPrevChapterId);
-      } else if (e.key === 'ArrowRight' && currentNextChapterId) {
-        navigateToChapter(currentNextChapterId);
-      } else if (e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) {
-        e.preventDefault();
-        window.scrollBy({ top: Math.round(window.innerHeight * 0.85), behavior: 'smooth' });
-      } else if (e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) {
-        e.preventDefault();
-        window.scrollBy({ top: -Math.round(window.innerHeight * 0.85), behavior: 'smooth' });
-      } else if (e.key === 'f' || e.key === 'F') {
-        toggleFullscreen();
-      } else if (e.key === 'Escape') {
-        setShowSettingsModal(false);
-        setShowDrawer(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentPrevChapterId, currentNextChapterId, navigateToChapter]);
-
-  const chaptersListRef = useRef(chaptersList);
-  chaptersListRef.current = chaptersList;
-  const activeChapterIndexRef = useRef(activeChapterIndex);
-  activeChapterIndexRef.current = activeChapterIndex;
-  const activeChapterIdRef = useRef(chapter.id);
-  activeChapterIdRef.current = chapter.id;
-  const switchingChapterRef = useRef(switchingChapter);
-  switchingChapterRef.current = switchingChapter;
-  const loadNextChapterRef = useRef(loadNextChapter);
-  loadNextChapterRef.current = loadNextChapter;
-  const sourceIdRef = useRef(sourceId);
-  sourceIdRef.current = sourceId;
-
-  // Scroll listener for reading progress, active chapter tracking, and seamless infinite scrolling
-  useEffect(() => {
-    const handleScroll = () => {
-      if (switchingChapterRef.current) return;
-      const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-      const vh = window.innerHeight;
-      const scrollHeight = Math.max(
-        document.documentElement.scrollHeight,
-        document.body.scrollHeight,
-        1
-      );
-
-      // 1. Calculate reading progress for active chapter
-      const currentChapterId = activeChapterIdRef.current;
-      const activeEl = currentChapterId ? document.getElementById(`chapter-section-${currentChapterId}`) : null;
-      let currentProgress = 0;
-      if (activeEl && activeEl.offsetHeight > 0) {
-        const chapterTop = activeEl.offsetTop;
-        const chapterHeight = activeEl.offsetHeight;
-        const chapterScroll = Math.max(0, scrollY - chapterTop);
-        const chapterTotalHeight = Math.max(1, chapterHeight - vh * 0.4);
-        currentProgress = Math.min(100, Math.max(0, Math.round((chapterScroll / chapterTotalHeight) * 100)));
-      } else {
-        const totalHeight = scrollHeight - vh;
-        if (totalHeight > 0) {
-          currentProgress = Math.min(100, Math.max(0, Math.round((scrollY / totalHeight) * 100)));
-        }
-      }
-      setReadingProgress(currentProgress);
-
-      // 2. Active chapter tracking based on scroll position
-      const list = chaptersListRef.current;
-      for (let i = list.length - 1; i >= 0; i--) {
-        const el = document.getElementById(`chapter-section-${list[i].id}`);
-        if (el && el.offsetTop <= scrollY + 250) {
-          if (activeChapterIndexRef.current !== i) {
-            setActiveChapterIndex(i);
-            const activeCh = list[i];
-            window.history.replaceState(
-              null,
-              '',
-              `/read/${activeCh.bookId}/${activeCh.id}?source=${sourceIdRef.current}`
-            );
-          }
-          break;
-        }
-      }
-
-      // 3. Infinite scroll trigger when within 1400px of bottom
-      if (scrollHeight - (scrollY + vh) < 1400) {
-        loadNextChapterRef.current();
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  // Keyboard navigation hook
+  useReaderKeyboard({
+    prevChapterId: currentPrevChapterId,
+    nextChapterId: currentNextChapterId,
+    onNavigateChapter: navigateToChapter,
+    onCloseModals: () => {
+      setShowSettingsModal(false);
+      setShowDrawer(false);
+    },
+  });
 
   // Theme styling class
   const themeClass = `theme-${settings.theme}`;
@@ -674,7 +617,6 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                 <div className="h-4 bg-current opacity-[0.08] rounded w-[45%] animate-pulse" />
               </div>
             </div>
-
           </section>
         ) : (
           /* Continuous Chapter List */
@@ -817,7 +759,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         <div className="fixed top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-zinc-900/90 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-mono shadow-md select-none">
           <span>定位：“{highlightKeyword}”</span>
           <button
-            onClick={() => setHighlightKeyword(null)}
+            onClick={() => {
+              setHighlightKeyword(null);
+              targetScrollChapterIdRef.current = null;
+            }}
             className="text-zinc-400 hover:text-white ml-0.5 p-0.5 rounded-full transition-colors"
             title="清除高亮"
           >
@@ -855,6 +800,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         themeClass={themeClass}
         onSelectChapter={(targetChapterId, kw) => {
           setHighlightKeyword(kw);
+          targetScrollChapterIdRef.current = targetChapterId;
           navigateToChapter(targetChapterId);
         }}
       />

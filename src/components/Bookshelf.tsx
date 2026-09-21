@@ -3,8 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { BookshelfItem, storage } from '@/lib/storage';
-import { BookMarked, Trash2, ArrowRight, BookOpen, Clock } from 'lucide-react';
-import { BookCoverPlaceholder } from './BookCoverPlaceholder';
+import { BookMarked, BookOpen, Clock } from 'lucide-react';
+import { BookCard } from './BookCard';
+
+export { BookCard } from './BookCard';
+export type { BookCardProps, BookCardData } from './BookCard';
 
 interface BookshelfProps {
   items: BookshelfItem[];
@@ -54,66 +57,15 @@ export const Bookshelf: React.FC<BookshelfProps> = ({ items, onRefresh, onOpenSe
 
   return (
     <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
-      {items.map((book) => {
-        const readHref = book.lastChapterId
-          ? `/read/${book.id}/${book.lastChapterId}?source=${book.sourceId}`
-          : `/book/${book.id}?source=${book.sourceId}`;
-
-        return (
-          <div
-            key={`${book.sourceId}-${book.id}`}
-            className="group relative flex flex-col"
-          >
-            {/* Book Cover */}
-            <Link href={readHref} className="relative aspect-[4/5] w-full bg-zinc-100 rounded-lg overflow-hidden block">
-              <BookCoverPlaceholder title={book.title} className="absolute inset-0" />
-              {book.cover ? (
-                <img
-                  src={book.cover}
-                  alt={book.title}
-                  className="relative w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  onError={(e) => {
-                    // Reveal the placeholder underneath instead of a broken image.
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              ) : null}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2 sm:p-2.5">
-                <span className="text-white text-[10px] sm:text-xs font-medium flex items-center gap-1 font-mono">
-                  继续阅读 <ArrowRight className="w-3 h-3" />
-                </span>
-              </div>
-            </Link>
-
-            {/* Book Info */}
-            <div className="pt-2 flex-1 flex flex-col justify-between">
-              <div>
-                <Link href={`/book/${book.id}?source=${book.sourceId}`} className="block">
-                  <h4 className="font-medium text-zinc-900 text-xs sm:text-sm line-clamp-1 group-hover:text-black transition-colors">
-                    {book.title}
-                  </h4>
-                </Link>
-                <p className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 line-clamp-1">
-                  {book.author || '佚名'}
-                </p>
-              </div>
-
-              <div className="mt-2 pt-1.5 border-t border-zinc-100 flex items-center justify-between gap-1">
-                <span className="text-[10px] sm:text-[11px] text-zinc-500 line-clamp-1 font-mono truncate flex-1">
-                  {book.lastChapterTitle || '尚未阅读'}
-                </span>
-                <button
-                  onClick={(e) => handleRemove(e, book.id, book.sourceId)}
-                  className="text-zinc-400 hover:text-red-600 transition-colors p-0.5 rounded shrink-0"
-                  title="移出书架"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })}
+      {items.map((book) => (
+        <BookCard
+          key={`${book.sourceId}-${book.id}`}
+          book={book}
+          variant="shelf"
+          isOnShelf={true}
+          onRemoveFromShelf={(e) => handleRemove(e, book.id, book.sourceId)}
+        />
+      ))}
     </div>
   );
 };
