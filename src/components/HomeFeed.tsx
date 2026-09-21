@@ -80,7 +80,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
 
               {!hasCovers ? (
                 /* Coverless Ranking-style List */
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1 sm:gap-1.5">
                   {section.items.map((book, bIdx) => {
                     const rankNum = book.rank || bIdx + 1;
                     const rankBadgeClass = getRankBadgeClass(rankNum);
@@ -89,15 +89,15 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                       <Link
                         key={book.id}
                         href={`/book/${book.id}?source=${sourceId}`}
-                        className="group flex items-center gap-3 p-3 rounded-xl bg-white border border-zinc-200/70 hover:border-zinc-300 hover:shadow-xs transition-all"
+                        className="group flex items-center gap-2.5 py-2 px-2.5 rounded-lg hover:bg-zinc-100/70 transition-colors"
                       >
                         <span
-                          className={`w-6 h-6 flex items-center justify-center text-xs rounded-md shrink-0 font-mono ${rankBadgeClass}`}
+                          className={`w-5 h-5 flex items-center justify-center text-xs rounded-md shrink-0 font-mono ${rankBadgeClass}`}
                         >
                           {rankNum}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:opacity-75 transition-opacity">
+                          <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:text-black transition-colors">
                             {book.title}
                           </p>
                           <div className="flex items-center gap-2 text-[11px] text-zinc-400 mt-0.5">
@@ -115,14 +115,14 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                 </div>
               ) : (
                 /* Visual Cover Grid */
-                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
                   {section.items.map((book) => (
                     <Link
                       key={book.id}
                       href={`/book/${book.id}?source=${sourceId}`}
-                      className="group flex flex-col space-y-1.5 sm:space-y-2 p-1.5 sm:p-2 rounded-xl bg-white border border-zinc-200/70 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all"
+                      className="group flex flex-col space-y-1.5"
                     >
-                      <div className="w-full aspect-[4/5] rounded-lg overflow-hidden relative bg-zinc-100 shadow-inner">
+                      <div className="w-full aspect-[4/5] rounded-lg overflow-hidden relative bg-zinc-100">
                         {book.cover ? (
                           <img
                             src={book.cover}
@@ -141,17 +141,17 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                         </div>
                       </div>
 
-                      <div className="flex-1 flex flex-col justify-between">
+                      <div className="space-y-0.5">
                         <h3
-                          className="font-medium text-xs sm:text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:opacity-75 transition-opacity"
+                          className="font-medium text-xs sm:text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:text-black transition-colors"
                           title={book.title}
                         >
                           {book.title}
                         </h3>
                         {book.author ? (
-                          <p className="text-[10px] sm:text-[11px] text-zinc-500 truncate mt-0.5 sm:mt-1">{book.author}</p>
+                          <p className="text-[10px] sm:text-[11px] text-zinc-500 truncate">{book.author}</p>
                         ) : book.status ? (
-                          <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate mt-0.5 sm:mt-1">{book.status}</p>
+                          <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate">{book.status}</p>
                         ) : null}
                       </div>
                     </Link>
@@ -178,14 +178,14 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                   section.columns.length >= 3
                     ? 'sm:grid-cols-2 md:grid-cols-3'
                     : 'sm:grid-cols-2'
-                } gap-4 sm:gap-6`}
+                } gap-6`}
               >
                 {section.columns.map((col, cIdx) => (
                   <div
                     key={cIdx}
-                    className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-5 shadow-sm space-y-3"
+                    className="space-y-2"
                   >
-                    <div className="flex items-center justify-between border-b border-zinc-100 pb-2.5">
+                    <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
                       <h3 className="font-serif font-bold text-sm sm:text-base text-zinc-900 flex items-center gap-1.5">
                         <span className="w-1.5 h-4 bg-black rounded-full" />
                         {col.title}
@@ -193,7 +193,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                       <span className="text-[11px] text-zinc-400 font-mono">TOP {col.items.length}</span>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       {col.items.map((book, bIdx) => {
                         const rankNum = book.rank || bIdx + 1;
                         const rankBadgeClass = getRankBadgeClass(rankNum);
@@ -202,7 +202,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                           <Link
                             key={book.id}
                             href={`/book/${book.id}?source=${sourceId}`}
-                            className="group flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-50 transition-colors"
+                            className="group flex items-center gap-2.5 py-1.5 px-2 rounded-lg hover:bg-zinc-100/70 transition-colors"
                           >
                             <span
                               className={`w-5 h-5 flex items-center justify-center text-xs rounded-md shrink-0 font-mono ${rankBadgeClass}`}
@@ -210,7 +210,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                               {rankNum}
                             </span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:opacity-75 transition-opacity">
+                              <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:text-black transition-colors">
                                 {book.title}
                               </p>
                               <div className="flex items-center gap-2 text-[11px] text-zinc-400 mt-0.5">
@@ -268,7 +268,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
 
               {/* Tab Content: Ranking-style list if no covers, or visual cover grid */}
               {!currentTab?.items?.some((b) => !!b.cover) ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1 sm:gap-1.5">
                   {currentTab?.items?.map((book, bIdx) => {
                     const rankNum = book.rank || bIdx + 1;
                     const rankBadgeClass = getRankBadgeClass(rankNum);
@@ -277,15 +277,15 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                       <Link
                         key={book.id}
                         href={`/book/${book.id}?source=${sourceId}`}
-                        className="group flex items-center gap-3 p-3 rounded-xl bg-white border border-zinc-200/70 hover:border-zinc-300 hover:shadow-xs transition-all"
+                        className="group flex items-center gap-2.5 py-2 px-2.5 rounded-lg hover:bg-zinc-100/70 transition-colors"
                       >
                         <span
-                          className={`w-6 h-6 flex items-center justify-center text-xs rounded-md shrink-0 font-mono ${rankBadgeClass}`}
+                          className={`w-5 h-5 flex items-center justify-center text-xs rounded-md shrink-0 font-mono ${rankBadgeClass}`}
                         >
                           {rankNum}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:opacity-75 transition-opacity">
+                          <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:text-black transition-colors">
                             {book.title}
                           </p>
                           <div className="flex items-center gap-2 text-[11px] text-zinc-400 mt-0.5">
@@ -302,14 +302,14 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                   })}
                 </div>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
                   {currentTab?.items?.map((book) => (
                     <Link
                       key={book.id}
                       href={`/book/${book.id}?source=${sourceId}`}
-                      className="group flex flex-col space-y-1.5 sm:space-y-2 p-1.5 sm:p-2 rounded-xl bg-white border border-zinc-200/70 shadow-sm hover:shadow-md hover:border-zinc-300 transition-all"
+                      className="group flex flex-col space-y-1.5"
                     >
-                      <div className="w-full aspect-[4/5] rounded-lg overflow-hidden relative bg-zinc-100 shadow-inner">
+                      <div className="w-full aspect-[4/5] rounded-lg overflow-hidden relative bg-zinc-100">
                         {book.cover ? (
                           <img
                             src={book.cover}
@@ -328,17 +328,17 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                         </div>
                       </div>
 
-                      <div className="flex-1 flex flex-col justify-between">
+                      <div className="space-y-0.5">
                         <h3
-                          className="font-medium text-xs sm:text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:opacity-75 transition-opacity"
+                          className="font-medium text-xs sm:text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:text-black transition-colors"
                           title={book.title}
                         >
                           {book.title}
                         </h3>
                         {book.author ? (
-                          <p className="text-[10px] sm:text-[11px] text-zinc-500 truncate mt-0.5 sm:mt-1">{book.author}</p>
+                          <p className="text-[10px] sm:text-[11px] text-zinc-500 truncate">{book.author}</p>
                         ) : book.status ? (
-                          <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate mt-0.5 sm:mt-1">{book.status}</p>
+                          <p className="text-[10px] sm:text-[11px] text-zinc-400 truncate">{book.status}</p>
                         ) : null}
                       </div>
                     </Link>
@@ -360,15 +360,15 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 sm:gap-2">
                 {section.items.map((book) => (
                   <Link
                     key={book.id}
                     href={`/book/${book.id}?source=${sourceId}`}
-                    className="group flex items-center justify-between p-3 rounded-xl bg-white border border-zinc-200/70 hover:border-zinc-300 hover:shadow-sm transition-all"
+                    className="group flex items-center justify-between py-2 px-2.5 rounded-lg hover:bg-zinc-100/70 transition-colors"
                   >
                     <div className="min-w-0 pr-3">
-                      <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:opacity-75 transition-opacity">
+                      <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:text-black transition-colors">
                         {book.title}
                       </p>
                       {book.latestChapter && (

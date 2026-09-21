@@ -327,8 +327,8 @@ export default function BookDetailPage() {
 
         {loading ? (
           <div className="space-y-8 animate-pulse">
-            {/* Book Meta Card Skeleton */}
-            <div className="bg-white rounded-xl p-6 sm:p-8 border border-zinc-200 shadow-sm flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
+            {/* Book Meta Skeleton */}
+            <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-start pb-8 border-b border-zinc-200/80">
               <div className="w-36 sm:w-44 aspect-[4/5] bg-zinc-200 rounded-lg shrink-0 mx-auto sm:mx-0" />
               <div className="flex-1 min-w-0 space-y-4 w-full">
                 <div className="space-y-2">
@@ -349,8 +349,8 @@ export default function BookDetailPage() {
                 </div>
               </div>
             </div>
-            {/* Chapters Card Skeleton */}
-            <div className="bg-white rounded-xl border border-zinc-200 p-6 space-y-4">
+            {/* Chapters Skeleton */}
+            <div className="space-y-4 pt-2">
               <div className="h-5 bg-zinc-200 rounded w-36" />
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {Array.from({ length: 9 }).map((_, i) => (
@@ -371,10 +371,10 @@ export default function BookDetailPage() {
           </div>
         ) : (
           <>
-            {/* Book Meta Card */}
-            <div className="bg-white rounded-xl p-6 sm:p-8 border border-zinc-200 shadow-sm flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
+            {/* Book Meta Area */}
+            <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-start pb-8 border-b border-zinc-200/80">
               {/* Cover */}
-              <div className="w-36 sm:w-44 aspect-[4/5] bg-zinc-100 rounded-lg overflow-hidden shadow-sm border border-zinc-200 flex-shrink-0 mx-auto sm:mx-0 relative">
+              <div className="w-36 sm:w-44 aspect-[4/5] bg-zinc-100 rounded-lg overflow-hidden flex-shrink-0 mx-auto sm:mx-0 relative">
                 <BookCoverPlaceholder title={book.title} className="absolute inset-0" />
                 {book.cover ? (
                   <img
@@ -432,7 +432,7 @@ export default function BookDetailPage() {
                   {startChapterId ? (
                     <Link
                       href={`/read/${book.id}/${startChapterId}?source=${sourceId}`}
-                      className="flex-1 sm:flex-initial px-6 py-2.5 sm:py-3 rounded-xl bg-black text-white hover:bg-zinc-800 text-xs sm:text-sm font-medium transition-colors shadow-sm flex items-center justify-center gap-2 whitespace-nowrap"
+                      className="flex-1 sm:flex-initial px-6 py-2.5 sm:py-3 rounded-xl bg-black text-white hover:bg-zinc-800 text-xs sm:text-sm font-medium transition-colors shadow-2xs flex items-center justify-center gap-2 whitespace-nowrap"
                     >
                       <BookOpen className="w-4 h-4 shrink-0" />
                       <span>{lastReadChapterId ? '继续阅读' : '开始阅读'}</span>
@@ -552,9 +552,9 @@ export default function BookDetailPage() {
               </div>
             </div>
 
-            {/* Chapter List Card */}
-            <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-              <div className="p-4 sm:p-5 border-b border-zinc-100 bg-zinc-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Chapter List Section */}
+            <section className="space-y-4 pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-200">
                 <div className="flex items-center gap-2 min-w-0">
                   <Bookmark className="w-4 h-4 text-zinc-900 shrink-0" />
                   <h2 className="font-bold text-base text-zinc-950 shrink-0">目录</h2>
@@ -597,7 +597,7 @@ export default function BookDetailPage() {
 
               {/* Chapter Chunk Grouping & Fast Jump Bar */}
               {chapterChunks.length > 0 && !chapterSearch.trim() && (
-                <div className="px-3 sm:px-4 py-2 bg-zinc-50 border-b border-zinc-100 flex items-center justify-between gap-2 text-xs">
+                <div className="py-2 border-b border-zinc-100 flex items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                     <span className="text-[11px] font-mono text-zinc-500 shrink-0">分组</span>
                     <select
@@ -640,7 +640,7 @@ export default function BookDetailPage() {
               <div className="relative">
                 <div
                   ref={chaptersContainerRef}
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-h-[600px] overflow-y-auto"
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0.5 max-h-[600px] overflow-y-auto"
                 >
                   {filteredChapters.length === 0 ? (
                     <div className="col-span-full py-12 text-center text-xs text-zinc-400">
@@ -655,10 +655,10 @@ export default function BookDetailPage() {
                           key={ch.id}
                           id={`chapter-item-${ch.id}`}
                           href={`/read/${book.id}/${ch.id}?source=${sourceId}`}
-                          className={`flex items-center justify-between px-4 py-3 text-xs transition-colors border-b border-zinc-100 ${
+                          className={`flex items-center justify-between px-3 py-2.5 text-xs rounded-md transition-colors ${
                             isLastRead
-                              ? 'chapter-item-current bg-zinc-100 text-zinc-950 font-bold border-l-4 border-zinc-900'
-                              : 'text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950'
+                              ? 'chapter-item-current bg-zinc-100 text-zinc-950 font-bold'
+                              : 'text-zinc-700 hover:bg-zinc-100/70 hover:text-zinc-950'
                           }`}
                         >
                           <span className="line-clamp-1 flex-1 pr-2">{ch.title}</span>
@@ -695,7 +695,7 @@ export default function BookDetailPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </section>
 
             <BookDownloaderModal
               isOpen={showDownloader}

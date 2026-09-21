@@ -219,7 +219,7 @@ function BookshelfContent() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 lg:gap-5">
+            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
               {historyItems.map((book) => {
                 const readHref = book.lastChapterId
                   ? `/read/${book.id}/${book.lastChapterId}?source=${book.sourceId}`
@@ -229,12 +229,12 @@ function BookshelfContent() {
                 return (
                   <div
                     key={`${book.sourceId}-${book.id}`}
-                    className="group relative flex flex-col bg-white rounded-xl overflow-hidden border border-zinc-200 shadow-sm hover:shadow-md hover:border-black transition-all duration-200"
+                    className="group relative flex flex-col"
                   >
                     {/* Cover */}
                     <Link
                       href={readHref}
-                      className="relative aspect-[4/5] w-full bg-zinc-100 overflow-hidden block border-b border-zinc-100"
+                      className="relative aspect-[4/5] w-full bg-zinc-100 rounded-lg overflow-hidden block"
                     >
                       <BookCoverPlaceholder title={book.title} className="absolute inset-0" />
                       {book.cover ? (
@@ -262,21 +262,21 @@ function BookshelfContent() {
                     </Link>
 
                     {/* Info */}
-                    <div className="p-2 sm:p-3 flex-1 flex flex-col justify-between">
+                    <div className="pt-2 flex-1 flex flex-col justify-between">
                       <div>
                         <Link href={`/book/${book.id}?source=${book.sourceId}`} className="block">
                           <h4 className="font-medium text-zinc-900 text-xs sm:text-sm line-clamp-1 group-hover:text-black transition-colors">
                             {book.title}
                           </h4>
                         </Link>
-                        <p className="text-[10px] sm:text-xs text-zinc-500 mt-0.5 line-clamp-1">
+                        <p className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 line-clamp-1">
                           {book.author || '佚名'}
                         </p>
                       </div>
 
-                      <div className="mt-2 sm:mt-3 space-y-1.5 sm:space-y-2">
+                      <div className="mt-2">
                         {/* Last Read Chapter + Progress */}
-                        <div className="text-[9px] sm:text-[10px] text-zinc-600 bg-zinc-100 border border-zinc-200/80 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded line-clamp-1 font-mono flex items-center justify-between">
+                        <div className="text-[10px] sm:text-[11px] text-zinc-500 font-mono truncate flex items-center justify-between">
                           <span className="truncate flex-1">{book.lastChapterTitle || '阅读进度'}</span>
                           {book.progressPercent !== undefined && (
                             <span className="shrink-0 font-bold ml-1 text-zinc-800">
@@ -286,7 +286,7 @@ function BookshelfContent() {
                         </div>
 
                         {/* Actions: Add to shelf + Delete */}
-                        <div className="flex items-center justify-between pt-1 border-t border-zinc-100 text-xs gap-1">
+                        <div className="flex items-center justify-between pt-1.5 border-t border-zinc-100 text-xs gap-1 mt-1.5">
                           <button
                             type="button"
                             onClick={(e) => handleToggleShelf(e, book)}

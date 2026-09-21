@@ -70,8 +70,9 @@ export const BookCoverPlaceholder: React.FC<{ title?: string; className?: string
         rx="2"
         fill="none"
         stroke={palette.accent}
-        strokeWidth="0.75"
-        opacity="0.3"
+        strokeWidth="0.5"
+        className="book-cover-placeholder-frame"
+        opacity="0.2"
       />
 
       {/* Decorative top header line */}
@@ -81,8 +82,9 @@ export const BookCoverPlaceholder: React.FC<{ title?: string; className?: string
         x2="68"
         y2="32"
         stroke={palette.accent}
-        strokeWidth="0.75"
-        opacity="0.35"
+        strokeWidth="0.5"
+        className="book-cover-placeholder-frame"
+        opacity="0.2"
       />
 
       {/* Title First Character */}
@@ -106,8 +108,9 @@ export const BookCoverPlaceholder: React.FC<{ title?: string; className?: string
         x2="68"
         y2="88"
         stroke={palette.accent}
-        strokeWidth="0.75"
-        opacity="0.35"
+        strokeWidth="0.5"
+        className="book-cover-placeholder-frame"
+        opacity="0.2"
       />
     </svg>
   );

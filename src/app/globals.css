@@ -787,7 +787,12 @@ html.theme-apricot body {
 
 .book-cover-placeholder-spine {
   fill: var(--border-color) !important;
-  opacity: 0.6;
+  opacity: 0.4;
+}
+
+.book-cover-placeholder-frame {
+  stroke: var(--border-color) !important;
+  opacity: 0.25;
 }
 
 .book-cover-placeholder-text {

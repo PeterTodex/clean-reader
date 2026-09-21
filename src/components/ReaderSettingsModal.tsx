@@ -50,7 +50,7 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
                 key={t.id}
                 onClick={() => onUpdateSettings({ theme: t.id })}
                 style={{ backgroundColor: t.bg, color: t.text, borderColor: t.border }}
-                className={`h-14 rounded-lg border flex flex-col items-center justify-center relative transition-all text-xs shadow-xs ${
+                className={`h-14 rounded-lg border flex flex-col items-center justify-center relative transition-all text-xs ${
                   settings.theme === t.id ? 'font-bold' : 'font-medium hover:opacity-90'
                 }`}
               >
@@ -166,7 +166,7 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 shrink-0 ${
                 isTtsActive
                   ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-300 dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700'
-                  : 'bg-black text-white hover:bg-zinc-800 shadow-xs'
+                  : 'bg-black text-white hover:bg-zinc-800'
               }`}
             >
               <Headphones className="w-3.5 h-3.5" />

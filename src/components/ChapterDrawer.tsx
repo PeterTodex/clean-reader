@@ -265,7 +265,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
   return (
     <Drawer isOpen={isOpen} onClose={onClose} side="left" width="max-w-md w-full">
         {/* Header */}
-        <div className="p-3 sm:p-4 border-b border-zinc-100 bg-zinc-50/50 flex flex-col gap-2.5">
+        <div className="p-3 sm:p-4 border-b border-zinc-100 flex flex-col gap-2.5">
           {/* Row 1: Dual Segmented Tabs & Close button */}
           <div className="flex items-center justify-between gap-2">
             <div className="segmented-tab-track flex items-center gap-1 p-1 rounded-xl text-xs font-medium">
@@ -421,7 +421,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
 
             {/* Chapter Chunk Grouping Bar */}
             {chapterChunks.length > 0 && !search.trim() && (
-              <div className="px-3 py-2 bg-zinc-50 border-b border-zinc-100 flex items-center justify-between gap-2 text-xs">
+              <div className="px-3 py-2 border-b border-zinc-100 flex items-center justify-between gap-2 text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[11px] font-mono text-zinc-400 shrink-0">分卷：</span>
                   <select
@@ -493,10 +493,10 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
                           onClose();
                         }
                       }}
-                      className={`flex items-center justify-between px-4 py-3 text-xs transition-colors ${
+                      className={`flex items-center justify-between px-4 py-2.5 text-xs transition-colors ${
                         isCurrent
-                          ? 'chapter-item-current bg-zinc-100 text-zinc-950 font-bold border-l-4 border-zinc-900'
-                          : 'text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950'
+                          ? 'chapter-item-current bg-zinc-100 text-zinc-950 font-bold'
+                          : 'text-zinc-700 hover:bg-zinc-100/70 hover:text-zinc-950'
                       }`}
                     >
                       <span className="line-clamp-1 flex-1 pr-2">{c.title}</span>
@@ -547,7 +547,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
                       onClose();
                     }}
                     className={`group p-3 rounded-lg transition-all cursor-pointer flex items-start justify-between gap-3 ${
-                      isCurrent ? 'bg-zinc-100 border border-zinc-300' : 'hover:bg-zinc-50'
+                      isCurrent ? 'bg-zinc-100' : 'hover:bg-zinc-100/70'
                     }`}
                   >
                     <div className="min-w-0 flex-1">
@@ -560,7 +560,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
                         )}
                       </div>
                       {bm.excerpt && (
-                        <p className="text-xs text-zinc-600 line-clamp-2 leading-relaxed bg-zinc-50 p-2 rounded border border-zinc-200/80 mb-1.5 font-mono">
+                        <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed mb-1.5 pl-2 border-l-2 border-zinc-300">
                           {bm.excerpt}
                         </p>
                       )}

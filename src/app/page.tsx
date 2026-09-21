@@ -76,12 +76,12 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col transition-colors duration-200">
       <Header onSearchClick={() => setShowSearchModal(true)} />
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 sm:py-8 space-y-6">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 pb-6 sm:pb-8 space-y-6">
         {/* Quick Resume Reading Banner */}
         {recentBook && recentBook.lastChapterId && (
-          <div className="flex items-center justify-between p-3 sm:px-4 bg-zinc-50 border border-zinc-200/80 rounded-xl hover:border-black transition-colors group">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <BookOpen className="w-4 h-4 text-zinc-900 shrink-0" />
+          <div className="flex items-center justify-between py-2.5 border-b border-zinc-200/70 group">
+            <div className="flex items-center gap-2 min-w-0">
+              <BookOpen className="w-4 h-4 text-zinc-800 shrink-0" />
               <span className="text-xs text-zinc-500 shrink-0 font-medium hidden sm:inline">上次读到：</span>
               <span className="text-xs font-bold text-zinc-950 truncate group-hover:text-black">
                 {recentBook.title}
@@ -94,7 +94,7 @@ export default function HomePage() {
             </div>
             <Link
               href={`/read/${recentBook.id}/${recentBook.lastChapterId}?source=${recentBook.sourceId}`}
-              className="px-3 py-1.5 bg-black hover:bg-zinc-800 text-white rounded-lg text-xs font-medium shrink-0 ml-3 flex items-center gap-1.5 transition-colors shadow-xs"
+              className="px-3 py-1.5 bg-black hover:bg-zinc-800 text-white rounded-lg text-xs font-medium shrink-0 ml-3 flex items-center gap-1.5 transition-colors shadow-2xs"
             >
               <span>继续阅读</span>
               <ArrowRight className="w-3 h-3" />
