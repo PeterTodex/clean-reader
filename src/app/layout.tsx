@@ -5,6 +5,15 @@ import { GlobalThemeProvider } from '@/components/GlobalThemeProvider';
 export const metadata: Metadata = {
   title: '清阅',
   description: '一款专注于极致阅读体验的开源网页小说阅读器。支持多书源切换、防屏蔽备用线路、纯净排版、离线缓存、零广告打扰。',
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/icon.png', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
