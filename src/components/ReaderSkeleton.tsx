@@ -22,6 +22,9 @@ export const ReaderSkeleton: React.FC<ReaderSkeletonProps> = ({
   slowLoading = false,
 }) => {
   const [settings, setSettings] = useState<ReaderSettings>(DEFAULT_READER_SETTINGS);
+  // Ensure SSR and initial client hydration strictly match with stable placeholder text
+  const [displayBookTitle, setDisplayBookTitle] = useState('书籍阅读');
+  const [displayChapterTitle, setDisplayChapterTitle] = useState('');
 
   useEffect(() => {
     setSettings(storage.getSettings());
@@ -35,6 +38,18 @@ export const ReaderSkeleton: React.FC<ReaderSkeletonProps> = ({
     window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange);
     return () => window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange);
   }, []);
+
+  useEffect(() => {
+    if (bookTitle) {
+      setDisplayBookTitle(bookTitle);
+    }
+  }, [bookTitle]);
+
+  useEffect(() => {
+    if (chapterTitle) {
+      setDisplayChapterTitle(chapterTitle);
+    }
+  }, [chapterTitle]);
 
   const themeClass = `theme-${settings.theme}`;
 
@@ -60,7 +75,7 @@ export const ReaderSkeleton: React.FC<ReaderSkeletonProps> = ({
             className="flex items-center gap-1.5 text-sm font-medium hover:opacity-75 transition-opacity"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="line-clamp-1 max-w-[180px] sm:max-w-xs">{bookTitle}</span>
+            <span className="line-clamp-1 max-w-[180px] sm:max-w-xs">{displayBookTitle}</span>
           </Link>
 
           {/* Minimal non-intrusive status pulse */}
@@ -82,9 +97,9 @@ export const ReaderSkeleton: React.FC<ReaderSkeletonProps> = ({
       >
         <section className="animate-fade-in">
           {/* Chapter Title: Real title if available, otherwise title skeleton */}
-          {chapterTitle ? (
+          {displayChapterTitle ? (
             <h1 className="text-2xl sm:text-3xl font-bold font-serif mb-10 tracking-tight text-center pt-4">
-              {chapterTitle}
+              {displayChapterTitle}
             </h1>
           ) : (
             <div className="mb-10 pt-4 flex flex-col items-center">
@@ -142,7 +157,7 @@ export const ReaderSkeleton: React.FC<ReaderSkeletonProps> = ({
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-[52px] flex items-center justify-between text-xs opacity-35 select-none font-medium">
           <span>上一章</span>
           <span className="font-serif truncate max-w-[200px] sm:max-w-md">
-            {chapterTitle || '正文载入中...'}
+            {displayChapterTitle || '正文载入中...'}
           </span>
           <span>下一章</span>
         </div>

@@ -19,6 +19,7 @@ import {
   List,
   Trash2,
   Clock,
+  MapPin,
 } from 'lucide-react';
 
 function formatRelativeTime(timestamp: number): string {
@@ -71,6 +72,7 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
   const [isCaching, setIsCaching] = useState(false);
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
   const [bookmarkSaved, setBookmarkSaved] = useState(false);
+  const [selectedChunkIndex, setSelectedChunkIndex] = useState<number>(0);
   const currentItemRef = useRef<HTMLAnchorElement | null>(null);
 
   // Sync prop changes into local cachedSet
@@ -170,17 +172,48 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
     } catch {}
   };
 
+  const CHUNK_SIZE = 100;
+
+  useEffect(() => {
+    if (isOpen && chapters.length > CHUNK_SIZE) {
+      const idx = chapters.findIndex((c) => String(c.id) === String(currentChapterId));
+      if (idx >= 0) {
+        setSelectedChunkIndex(Math.floor(idx / CHUNK_SIZE));
+      }
+    }
+  }, [isOpen, currentChapterId, chapters]);
+
+  const chapterChunks = useMemo(() => {
+    if (chapters.length <= CHUNK_SIZE) return [];
+    const count = Math.ceil(chapters.length / CHUNK_SIZE);
+    const chunks: { index: number; label: string; start: number; end: number }[] = [];
+    for (let i = 0; i < count; i++) {
+      const start = i * CHUNK_SIZE + 1;
+      const end = Math.min((i + 1) * CHUNK_SIZE, chapters.length);
+      chunks.push({
+        index: i,
+        label: `第 ${start} - ${end} 章`,
+        start,
+        end,
+      });
+    }
+    return chunks;
+  }, [chapters]);
+
   const displayedChapters = useMemo(() => {
     let list = [...chapters];
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter((c) => c.title.toLowerCase().includes(q) || String(c.index).includes(q));
+    } else if (selectedChunkIndex >= 0 && chapterChunks.length > 0) {
+      const start = selectedChunkIndex * CHUNK_SIZE;
+      list = list.slice(start, start + CHUNK_SIZE);
     }
     if (isReverse) {
       list.reverse();
     }
     return list;
-  }, [chapters, search, isReverse]);
+  }, [chapters, search, isReverse, selectedChunkIndex, chapterChunks]);
 
   // Check if current chapter is bookmarked
   const isCurrentBookmarked = useMemo(() => {
@@ -293,10 +326,10 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
                 ) : isCaching ? (
                   <button
                     onClick={handleStopCacheAll}
-                    className="px-2 py-1 text-xs border rounded-md flex items-center gap-1.5 font-mono bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 transition-colors"
+                    className="px-2 py-1 text-xs border rounded-md flex items-center gap-1.5 font-mono bg-zinc-100 text-zinc-800 border-zinc-300 hover:bg-zinc-200 transition-colors"
                     title="正在后台缓存中，点击可暂停/取消"
                   >
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-600" />
                     <span>缓存中 ({cachedSet.size}/{chapters.length})</span>
                   </button>
                 ) : (
@@ -372,22 +405,77 @@ export const ChapterDrawer: React.FC<ChapterDrawerProps> = ({
               </div>
               {onOpenSearchContent && (
                 <button
+                  type="button"
                   onClick={() => {
                     onClose();
                     onOpenSearchContent();
                   }}
-                  className="px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:text-black bg-zinc-100 hover:bg-zinc-200 rounded-lg border border-zinc-200 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1"
-                  title="搜索正文关键词 / 角色出场"
+                  className="px-2.5 py-1.5 text-xs font-medium text-zinc-700 hover:text-black bg-white hover:bg-zinc-100 rounded-lg border border-zinc-200 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1 shadow-2xs"
+                  title="正文关键词检索 / 角色出场查找"
                 >
-                  <span>搜正文</span>
+                  <Search className="w-3.5 h-3.5 text-zinc-500" />
+                  <span>正文搜索</span>
                 </button>
               )}
             </div>
 
+            {/* Chapter Chunk Grouping Bar */}
+            {chapterChunks.length > 0 && !search.trim() && (
+              <div className="px-3 py-2 bg-zinc-50 border-b border-zinc-100 flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-mono text-zinc-400 shrink-0">分卷：</span>
+                  <select
+                    value={selectedChunkIndex}
+                    onChange={(e) => setSelectedChunkIndex(Number(e.target.value))}
+                    className="px-2 py-1 bg-white rounded border border-zinc-200 text-xs font-mono text-zinc-800 focus:outline-none"
+                  >
+                    {chapterChunks.map((chunk) => (
+                      <option key={chunk.index} value={chunk.index}>
+                        {chunk.label}
+                      </option>
+                    ))}
+                    <option value={-1}>全部展示（{chapters.length} 章）</option>
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const idx = chapters.findIndex((c) => String(c.id) === String(currentChapterId));
+                    if (idx >= 0) {
+                      setSelectedChunkIndex(Math.floor(idx / CHUNK_SIZE));
+                      setTimeout(() => {
+                        currentItemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }, 50);
+                    }
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-mono text-white bg-black hover:bg-zinc-800 rounded flex items-center gap-1 shrink-0 transition-colors"
+                  title="定位到当前正在阅读章节"
+                >
+                  <MapPin className="w-3 h-3 shrink-0" />
+                  <span>定位当前章</span>
+                </button>
+              </div>
+            )}
+
             {/* Chapter List */}
             <div className="flex-1 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
               {displayedChapters.length === 0 ? (
-                <div className="p-8 text-center text-xs text-zinc-400">没有匹配到相关章节</div>
+                <div className="p-8 text-center text-xs text-zinc-400 space-y-3">
+                  <div>没有匹配到相关章节</div>
+                  {onOpenSearchContent && search.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenSearchContent();
+                      }}
+                      className="px-3 py-1.5 bg-black text-white hover:bg-zinc-800 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 transition-colors shadow-xs"
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                      <span>在正文中搜索“{search.trim()}”</span>
+                    </button>
+                  )}
+                </div>
               ) : (
                 displayedChapters.map((c) => {
                   const isCurrent = String(c.id) === String(currentChapterId);

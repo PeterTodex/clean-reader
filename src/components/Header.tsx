@@ -81,6 +81,7 @@ export const Header: React.FC<HeaderProps> = ({ onSearchClick, onSearchFocus }) 
             href="/bookshelf"
             className="p-2 sm:px-3 sm:py-1.5 text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 rounded-lg flex items-center gap-1.5 transition-colors text-sm font-medium"
             title="我的书架"
+            aria-label={shelfCount > 0 ? `我的书架，${shelfCount} 本` : '我的书架'}
           >
             <Library className="w-4 h-4" />
             <span className="hidden sm:inline">书架</span>
@@ -94,7 +95,8 @@ export const Header: React.FC<HeaderProps> = ({ onSearchClick, onSearchFocus }) 
           <Link
             href="/sources"
             className="p-2 sm:px-3 sm:py-1.5 text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 rounded-lg flex items-center gap-1.5 transition-colors text-sm font-medium"
-            title="书源设置与测速"
+            title="书源与缓存状态"
+            aria-label="书源与缓存状态"
           >
             <Settings className="w-4 h-4" />
             <span className="hidden sm:inline">书源</span>

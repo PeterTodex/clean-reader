@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { HomeSection, HomeBookItem } from '@/sources/types';
 import { BookCoverPlaceholder } from './BookCoverPlaceholder';
+import { formatDisplayDate } from '@/lib/utils';
 import { Flame, Trophy, Layers, Clock, Sparkles } from 'lucide-react';
 
 interface HomeFeedProps {
@@ -46,11 +47,17 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
   };
 
   const getSectionIcon = (id: string, type: string) => {
-    if (id.includes('hot')) return <Flame className="w-5 h-5 text-amber-600" />;
-    if (id.includes('rank') || type === 'ranking') return <Trophy className="w-5 h-5 text-amber-600" />;
-    if (id.includes('cat') || type === 'tabs') return <Layers className="w-5 h-5 text-zinc-700" />;
-    if (id.includes('new') || id.includes('featured')) return <Sparkles className="w-5 h-5 text-amber-600" />;
-    return <Clock className="w-5 h-5 text-zinc-600" />;
+    if (id.includes('hot')) return <Flame className="w-5 h-5 text-zinc-800 dark:text-zinc-200" />;
+    if (id.includes('rank') || type === 'ranking') return <Trophy className="w-5 h-5 text-zinc-800 dark:text-zinc-200" />;
+    if (id.includes('cat') || type === 'tabs') return <Layers className="w-5 h-5 text-zinc-800 dark:text-zinc-200" />;
+    if (id.includes('new') || id.includes('featured')) return <Sparkles className="w-5 h-5 text-zinc-800 dark:text-zinc-200" />;
+    return <Clock className="w-5 h-5 text-zinc-800 dark:text-zinc-200" />;
+  };
+
+  const getRankBadgeClass = (rankNum: number) => {
+    return rankNum <= 3
+      ? 'bg-black text-white font-bold'
+      : 'bg-zinc-100 text-zinc-500 font-medium';
   };
 
   return (
@@ -76,14 +83,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
                   {section.items.map((book, bIdx) => {
                     const rankNum = book.rank || bIdx + 1;
-                    const rankBadgeClass =
-                      rankNum === 1
-                        ? 'bg-amber-500 text-white shadow-xs font-bold'
-                        : rankNum === 2
-                        ? 'bg-zinc-400 text-white font-bold'
-                        : rankNum === 3
-                        ? 'bg-amber-700/80 text-white font-bold'
-                        : 'bg-zinc-100 text-zinc-500 font-medium';
+                    const rankBadgeClass = getRankBadgeClass(rankNum);
 
                     return (
                       <Link
@@ -97,7 +97,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                           {rankNum}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:text-amber-800 transition-colors">
+                          <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:opacity-75 transition-opacity">
                             {book.title}
                           </p>
                           <div className="flex items-center gap-2 text-[11px] text-zinc-400 mt-0.5">
@@ -143,7 +143,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
 
                       <div className="flex-1 flex flex-col justify-between">
                         <h3
-                          className="font-medium text-xs sm:text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:text-amber-800 transition-colors"
+                          className="font-medium text-xs sm:text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:opacity-75 transition-opacity"
                           title={book.title}
                         >
                           {book.title}
@@ -187,7 +187,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                   >
                     <div className="flex items-center justify-between border-b border-zinc-100 pb-2.5">
                       <h3 className="font-serif font-bold text-sm sm:text-base text-zinc-900 flex items-center gap-1.5">
-                        <span className="w-1.5 h-4 bg-amber-600 rounded-full" />
+                        <span className="w-1.5 h-4 bg-black rounded-full" />
                         {col.title}
                       </h3>
                       <span className="text-[11px] text-zinc-400 font-mono">TOP {col.items.length}</span>
@@ -196,14 +196,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                     <div className="space-y-2">
                       {col.items.map((book, bIdx) => {
                         const rankNum = book.rank || bIdx + 1;
-                        const rankBadgeClass =
-                          rankNum === 1
-                            ? 'bg-amber-500 text-white shadow-xs font-bold'
-                            : rankNum === 2
-                            ? 'bg-zinc-400 text-white font-bold'
-                            : rankNum === 3
-                            ? 'bg-amber-700/80 text-white font-bold'
-                            : 'bg-zinc-100 text-zinc-500 font-medium';
+                        const rankBadgeClass = getRankBadgeClass(rankNum);
 
                         return (
                           <Link
@@ -217,7 +210,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                               {rankNum}
                             </span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:text-amber-800 transition-colors">
+                              <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:opacity-75 transition-opacity">
                                 {book.title}
                               </p>
                               <div className="flex items-center gap-2 text-[11px] text-zinc-400 mt-0.5">
@@ -278,14 +271,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
                   {currentTab?.items?.map((book, bIdx) => {
                     const rankNum = book.rank || bIdx + 1;
-                    const rankBadgeClass =
-                      rankNum === 1
-                        ? 'bg-amber-500 text-white shadow-xs font-bold'
-                        : rankNum === 2
-                        ? 'bg-zinc-400 text-white font-bold'
-                        : rankNum === 3
-                        ? 'bg-amber-700/80 text-white font-bold'
-                        : 'bg-zinc-100 text-zinc-500 font-medium';
+                    const rankBadgeClass = getRankBadgeClass(rankNum);
 
                     return (
                       <Link
@@ -299,7 +285,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                           {rankNum}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:text-amber-800 transition-colors">
+                          <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:opacity-75 transition-opacity">
                             {book.title}
                           </p>
                           <div className="flex items-center gap-2 text-[11px] text-zinc-400 mt-0.5">
@@ -344,7 +330,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
 
                       <div className="flex-1 flex flex-col justify-between">
                         <h3
-                          className="font-medium text-xs sm:text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:text-amber-800 transition-colors"
+                          className="font-medium text-xs sm:text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:opacity-75 transition-opacity"
                           title={book.title}
                         >
                           {book.title}
@@ -382,7 +368,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                     className="group flex items-center justify-between p-3 rounded-xl bg-white border border-zinc-200/70 hover:border-zinc-300 hover:shadow-sm transition-all"
                   >
                     <div className="min-w-0 pr-3">
-                      <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:text-amber-800 transition-colors">
+                      <p className="text-xs sm:text-sm font-medium text-zinc-900 truncate group-hover:opacity-75 transition-opacity">
                         {book.title}
                       </p>
                       {book.latestChapter && (
@@ -398,7 +384,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ sections, sourceId, loading 
                       )}
                       {book.updateTime && (
                         <p className="text-[10px] text-zinc-400 font-mono mt-0.5">
-                          {book.updateTime}
+                          {formatDisplayDate(book.updateTime)}
                         </p>
                       )}
                       {book.status && !book.updateTime && (

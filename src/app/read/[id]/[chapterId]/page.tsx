@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { ReaderView } from '@/components/ReaderView';
 import { ReaderSkeleton } from '@/components/ReaderSkeleton';
@@ -27,6 +27,11 @@ export default function ReaderPage() {
   const [error, setError] = useState<string | null>(null);
   const [slowLoading, setSlowLoading] = useState(false);
 
+  const chapterRef = useRef(chapter);
+  chapterRef.current = chapter;
+  const bookRef = useRef(book);
+  bookRef.current = book;
+
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     if (loading && !chapter) {
@@ -44,8 +49,8 @@ export default function ReaderPage() {
   useEffect(() => {
     if (!bookId || !chapterId) return;
 
-    // 1. If currently rendered chapter already matches, do nothing
-    if (chapter && chapter.id === chapterId && chapter.bookId === bookId) {
+    const currentChapter = chapterRef.current;
+    if (currentChapter && currentChapter.id === chapterId && currentChapter.bookId === bookId) {
       return;
     }
 
@@ -58,7 +63,7 @@ export default function ReaderPage() {
     }
 
     // 3. Only show full-screen spinner if no chapter is displayed yet
-    if (!chapter) {
+    if (!currentChapter) {
       setLoading(true);
     }
     setError(null);
@@ -70,7 +75,8 @@ export default function ReaderPage() {
     ];
 
     // Only fetch book detail if not already available in memory or state
-    if (!book || book.id !== bookId) {
+    const currentBook = bookRef.current;
+    if (!currentBook || currentBook.id !== bookId) {
       if (clientBookCache.has(bookKey)) {
         setBook(clientBookCache.get(bookKey)!);
       } else {
@@ -99,28 +105,38 @@ export default function ReaderPage() {
       .finally(() => {
         setLoading(false);
       });
-  }, [bookId, chapterId, sourceId, chapterKey, bookKey, chapter, book]);
+  }, [bookId, chapterId, sourceId, chapterKey, bookKey]);
 
-  // Resolve known book/chapter title for immediate skeleton display
-  const cachedBook = book || clientBookCache.get(bookKey);
-  const displayBookTitle =
-    cachedBook?.title ||
-    storage.getBookshelf().find((b) => b.id === bookId)?.title ||
-    storage.getHistory().find((h) => h.id === bookId)?.title ||
-    '书籍阅读';
+  const [mounted, setMounted] = useState(false);
+  const [cachedBookTitle, setCachedBookTitle] = useState('书籍阅读');
+  const [cachedChapterTitle, setCachedChapterTitle] = useState('');
 
-  const displayChapterTitle =
-    cachedBook?.chapters.find((c) => String(c.id) === String(chapterId))?.title ||
-    storage.getHistory().find((h) => h.id === bookId && String(h.lastChapterId) === String(chapterId))?.lastChapterTitle ||
-    '';
+  useEffect(() => {
+    setMounted(true);
+    const cachedBook = book || clientBookCache.get(bookKey);
+    const resolvedBookTitle =
+      cachedBook?.title ||
+      storage.getBookshelf().find((b) => b.id === bookId)?.title ||
+      storage.getHistory().find((h) => h.id === bookId)?.title ||
+      '书籍阅读';
+    setCachedBookTitle(resolvedBookTitle);
 
-  if (loading && !chapter) {
+    const resolvedChapterTitle =
+      cachedBook?.chapters.find((c) => String(c.id) === String(chapterId))?.title ||
+      storage.getHistory().find((h) => h.id === bookId && String(h.lastChapterId) === String(chapterId))?.lastChapterTitle ||
+      '';
+    setCachedChapterTitle(resolvedChapterTitle);
+  }, [bookId, chapterId, bookKey, book]);
+
+  // SSR and initial client hydration strictly render ReaderSkeleton with stable title
+  // Only after client mount does it switch to ReaderView or show local titles
+  if (!mounted || (loading && !chapter)) {
     return (
       <ReaderSkeleton
         bookId={bookId}
         sourceId={sourceId}
-        bookTitle={displayBookTitle}
-        chapterTitle={displayChapterTitle}
+        bookTitle={cachedBookTitle}
+        chapterTitle={cachedChapterTitle}
         slowLoading={slowLoading}
       />
     );
@@ -137,17 +153,23 @@ export default function ReaderPage() {
           <p className="text-xs text-zinc-500 leading-relaxed font-mono">
             {error || '章节内容不存在或源站线路受限'}
           </p>
-          <div className="pt-2 flex items-center justify-center gap-3">
+          <div className="pt-2 flex items-center justify-center gap-2 flex-wrap">
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-black text-white hover:bg-zinc-800 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
+              className="px-3.5 py-2 bg-black text-white hover:bg-zinc-800 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               重试本章
             </button>
             <Link
+              href={`/?search=1&keyword=${encodeURIComponent(cachedBookTitle && cachedBookTitle !== '书籍阅读' ? cachedBookTitle : '')}`}
+              className="px-3.5 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-200 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
+            >
+              换源搜索
+            </Link>
+            <Link
               href={`/book/${bookId}?source=${sourceId}`}
-              className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors border border-zinc-200"
+              className="px-3.5 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors border border-zinc-200"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               返回目录

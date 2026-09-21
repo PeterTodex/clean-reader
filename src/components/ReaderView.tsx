@@ -17,9 +17,9 @@ import {
   List,
   SlidersHorizontal,
   BookOpen,
-  Headphones,
-  Search,
   X,
+  Bookmark,
+  BookmarkCheck,
 } from 'lucide-react';
 
 interface ReaderViewProps {
@@ -56,6 +56,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [switchingChapter, setSwitchingChapter] = useState<{ id: string; title: string } | null>(null);
   const [readingProgress, setReadingProgress] = useState(0);
+  const [isCurrentBookmarked, setIsCurrentBookmarked] = useState(false);
+  const [bookmarkToast, setBookmarkToast] = useState<string | null>(null);
+  const restoredScrollRef = useRef<Record<string, boolean>>({});
+  const saveProgressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [cachedChapterIds, setCachedChapterIds] = useState<Set<string>>(() => {
     const set = new Set<string>(initialCachedChapterIds || []);
     if (initialChapter?.id) set.add(initialChapter.id);
@@ -173,9 +177,71 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     setSettings(updated);
   };
 
-  // Save reading progress to history (does not auto-add to bookshelf)
+  // Sync bookmark state when active chapter changes
   useEffect(() => {
-    if (chapter) {
+    if (chapter?.bookId && chapter?.id) {
+      const list = storage.getBookmarks(chapter.bookId);
+      setIsCurrentBookmarked(list.some((b) => String(b.chapterId) === String(chapter.id)));
+    }
+  }, [chapter?.bookId, chapter?.id]);
+
+  const handleToggleBookmark = () => {
+    if (!chapter) return;
+    if (isCurrentBookmarked) {
+      const list = storage.getBookmarks(chapter.bookId);
+      const existing = list.find((b) => String(b.chapterId) === String(chapter.id));
+      if (existing) {
+        storage.removeBookmark(existing.id);
+        setIsCurrentBookmarked(false);
+        setBookmarkToast('已取消此章书签');
+        setTimeout(() => setBookmarkToast(null), 2000);
+      }
+    } else {
+      storage.addBookmark({
+        id: `${chapter.bookId}_${chapter.id}_${Date.now()}`,
+        bookId: chapter.bookId,
+        sourceId,
+        chapterId: chapter.id,
+        chapterTitle: chapter.title,
+        excerpt: currentExcerpt.trim() || '书签标记位置',
+        createTime: Date.now(),
+      });
+      setIsCurrentBookmarked(true);
+      setBookmarkToast('已添加书签');
+      setTimeout(() => setBookmarkToast(null), 2000);
+    }
+  };
+
+  // Restore scroll position from history when opening chapter
+  useEffect(() => {
+    if (!chapter?.id || restoredScrollRef.current[chapter.id]) return;
+    const historyItem = storage.getHistory().find((h) => h.id === chapter.bookId && String(h.lastChapterId) === String(chapter.id));
+    const savedProgress = historyItem?.progressPercent || 0;
+    if (savedProgress > 3 && savedProgress < 98) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`chapter-section-${chapter.id}`);
+        if (el) {
+          const vh = window.innerHeight;
+          const targetY = el.offsetTop + Math.round((savedProgress / 100) * Math.max(1, el.offsetHeight - vh));
+          window.scrollTo({ top: targetY, behavior: 'instant' });
+          restoredScrollRef.current[chapter.id] = true;
+        }
+      }, 120);
+      return () => clearTimeout(timer);
+    } else {
+      restoredScrollRef.current[chapter.id] = true;
+    }
+  }, [chapter?.id, chapter?.bookId]);
+
+  // Save reading progress to history (throttled to avoid performance degradation)
+  useEffect(() => {
+    if (!chapter) return;
+
+    if (saveProgressTimerRef.current) {
+      clearTimeout(saveProgressTimerRef.current);
+    }
+
+    saveProgressTimerRef.current = setTimeout(() => {
       storage.saveToHistory({
         id: chapter.bookId,
         title: bookTitle,
@@ -187,7 +253,11 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         progressPercent: readingProgress,
         totalChapters: chapters.length,
       });
-    }
+    }, 600);
+
+    return () => {
+      if (saveProgressTimerRef.current) clearTimeout(saveProgressTimerRef.current);
+    };
   }, [chapter, bookTitle, bookAuthor, bookCover, sourceId, chapters.length, readingProgress]);
 
   // Prefetch next chapter
@@ -361,32 +431,61 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentPrevChapterId, currentNextChapterId, navigateToChapter]);
 
+  const chaptersListRef = useRef(chaptersList);
+  chaptersListRef.current = chaptersList;
+  const activeChapterIndexRef = useRef(activeChapterIndex);
+  activeChapterIndexRef.current = activeChapterIndex;
+  const activeChapterIdRef = useRef(chapter.id);
+  activeChapterIdRef.current = chapter.id;
+  const switchingChapterRef = useRef(switchingChapter);
+  switchingChapterRef.current = switchingChapter;
+  const loadNextChapterRef = useRef(loadNextChapter);
+  loadNextChapterRef.current = loadNextChapter;
+  const sourceIdRef = useRef(sourceId);
+  sourceIdRef.current = sourceId;
+
   // Scroll listener for reading progress, active chapter tracking, and seamless infinite scrolling
   useEffect(() => {
     const handleScroll = () => {
-      if (switchingChapter) return;
-      const scrollY = window.scrollY;
+      if (switchingChapterRef.current) return;
+      const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
       const vh = window.innerHeight;
-      const scrollHeight = document.documentElement.scrollHeight;
+      const scrollHeight = Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight,
+        1
+      );
 
-      // 1. Calculate reading progress
-      const totalHeight = scrollHeight - vh;
-      if (totalHeight > 0) {
-        const currentProgress = Math.min(100, Math.round((scrollY / totalHeight) * 100));
-        setReadingProgress(currentProgress);
+      // 1. Calculate reading progress for active chapter
+      const currentChapterId = activeChapterIdRef.current;
+      const activeEl = currentChapterId ? document.getElementById(`chapter-section-${currentChapterId}`) : null;
+      let currentProgress = 0;
+      if (activeEl && activeEl.offsetHeight > 0) {
+        const chapterTop = activeEl.offsetTop;
+        const chapterHeight = activeEl.offsetHeight;
+        const chapterScroll = Math.max(0, scrollY - chapterTop);
+        const chapterTotalHeight = Math.max(1, chapterHeight - vh * 0.4);
+        currentProgress = Math.min(100, Math.max(0, Math.round((chapterScroll / chapterTotalHeight) * 100)));
+      } else {
+        const totalHeight = scrollHeight - vh;
+        if (totalHeight > 0) {
+          currentProgress = Math.min(100, Math.max(0, Math.round((scrollY / totalHeight) * 100)));
+        }
       }
+      setReadingProgress(currentProgress);
 
       // 2. Active chapter tracking based on scroll position
-      for (let i = chaptersList.length - 1; i >= 0; i--) {
-        const el = document.getElementById(`chapter-section-${chaptersList[i].id}`);
+      const list = chaptersListRef.current;
+      for (let i = list.length - 1; i >= 0; i--) {
+        const el = document.getElementById(`chapter-section-${list[i].id}`);
         if (el && el.offsetTop <= scrollY + 250) {
-          if (activeChapterIndex !== i) {
+          if (activeChapterIndexRef.current !== i) {
             setActiveChapterIndex(i);
-            const activeCh = chaptersList[i];
+            const activeCh = list[i];
             window.history.replaceState(
               null,
               '',
-              `/read/${activeCh.bookId}/${activeCh.id}?source=${sourceId}`
+              `/read/${activeCh.bookId}/${activeCh.id}?source=${sourceIdRef.current}`
             );
           }
           break;
@@ -395,13 +494,13 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
       // 3. Infinite scroll trigger when within 1400px of bottom
       if (scrollHeight - (scrollY + vh) < 1400) {
-        loadNextChapter();
+        loadNextChapterRef.current();
       }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [chaptersList, activeChapterIndex, loadNextChapter, sourceId, switchingChapter]);
+  }, []);
 
   // Theme styling class
   const themeClass = `theme-${settings.theme}`;
@@ -443,35 +542,38 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     const yRatio = clientY / vh;
     const xRatio = clientX / vw;
 
-    // 4. Center tap zone (middle 24% vertically, center 50% horizontally): toggle controls menu
-    if (yRatio >= 0.38 && yRatio <= 0.62 && xRatio >= 0.25 && xRatio <= 0.75) {
-      setShowControls(true);
+    // 4. Center tap zone (vertical 30%-70%, horizontal 25%-75%): toggle controls menu
+    if (yRatio >= 0.30 && yRatio <= 0.70 && xRatio >= 0.25 && xRatio <= 0.75) {
+      setShowControls(!showControls);
       return;
     }
 
     // 5. Page distance: 85% of screen height (comfortable overlap)
     const pageDistance = Math.round(vh * 0.85);
 
-    if (yRatio < 0.5) {
-      // 上半部分：上一页
-      if (window.scrollY <= 15) {
+    // Left zone (xRatio < 0.25) or Top zone (yRatio < 0.30): Previous page
+    if (xRatio < 0.25 || (xRatio >= 0.25 && xRatio <= 0.75 && yRatio < 0.30)) {
+      const currentScroll = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+      if (currentScroll <= 15) {
         if (currentPrevChapterId) {
           navigateToChapter(currentPrevChapterId);
         }
       } else {
         window.scrollBy({ top: -pageDistance, behavior: 'smooth' });
       }
-    } else {
-      // 下半部分：下一页
-      const scrollBottom = window.scrollY + vh;
-      const docHeight = document.documentElement.scrollHeight;
-      if (scrollBottom >= docHeight - 30) {
-        if (currentNextChapterId) {
-          navigateToChapter(currentNextChapterId);
-        }
-      } else {
-        window.scrollBy({ top: pageDistance, behavior: 'smooth' });
+      return;
+    }
+
+    // Right zone (xRatio > 0.75) or Bottom zone (yRatio > 0.70): Next page
+    const currentScroll = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+    const scrollBottom = currentScroll + vh;
+    const docHeight = document.documentElement.scrollHeight;
+    if (scrollBottom >= docHeight - 30) {
+      if (currentNextChapterId) {
+        navigateToChapter(currentNextChapterId);
       }
+    } else {
+      window.scrollBy({ top: pageDistance, behavior: 'smooth' });
     }
   };
 
@@ -492,36 +594,32 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             <span className="line-clamp-1 max-w-[180px] sm:max-w-xs">{bookTitle}</span>
           </Link>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <button
-              onClick={() => setShowSearchModal(true)}
-              className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-              title="正文搜索 / 查出场"
-            >
-              <Search className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setShowTts(!showTts)}
-              className={`p-2 rounded-lg transition-colors ${
-                showTts
-                  ? 'bg-black text-white hover:bg-zinc-800 shadow-sm'
-                  : 'hover:bg-black/5 dark:hover:bg-white/10'
-              }`}
-              title={showTts ? '关闭听书' : '语音朗读听书'}
-            >
-              <Headphones className="w-5 h-5" />
-            </button>
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={() => setShowDrawer(true)}
               className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
               title="目录与书签"
+              aria-label="目录与书签"
             >
               <List className="w-5 h-5" />
             </button>
             <button
+              onClick={handleToggleBookmark}
+              className={`p-2 rounded-lg transition-colors flex items-center gap-1 ${
+                isCurrentBookmarked
+                  ? 'bg-black/5 dark:bg-white/10'
+                  : 'hover:bg-black/5 dark:hover:bg-white/10'
+              }`}
+              title={isCurrentBookmarked ? '取消当前章节书签' : '添加当前章节书签'}
+              aria-label={isCurrentBookmarked ? '取消当前章节书签' : '添加当前章节书签'}
+            >
+              <Bookmark className={`w-5 h-5 ${isCurrentBookmarked ? 'fill-current' : ''}`} />
+            </button>
+            <button
               onClick={() => setShowSettingsModal(true)}
               className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-              title="排版与主题设置"
+              title="阅读设置与听书"
+              aria-label="阅读设置与听书"
             >
               <SlidersHorizontal className="w-5 h-5" />
             </button>
@@ -706,6 +804,14 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         </div>
       </footer>
 
+      {/* Floating Bookmark Feedback Toast */}
+      {bookmarkToast && (
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 bg-zinc-900/95 backdrop-blur-md text-white px-3.5 py-1.5 rounded-full text-xs font-mono shadow-lg select-none animate-fade-in border border-zinc-700/50">
+          <Bookmark className="w-3.5 h-3.5 fill-current" />
+          <span>{bookmarkToast}</span>
+        </div>
+      )}
+
       {/* Floating Highlight Keyword Notice */}
       {highlightKeyword && (
         <div className="fixed top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-zinc-900/90 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-mono shadow-md select-none">
@@ -759,6 +865,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         onClose={() => setShowSettingsModal(false)}
         settings={settings}
         onUpdateSettings={handleUpdateSettings}
+        onToggleTts={() => setShowTts(!showTts)}
+        isTtsActive={showTts}
       />
 
       {/* TTS Audio Player */}

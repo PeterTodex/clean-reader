@@ -3,7 +3,7 @@
 import React from 'react';
 import { ReaderSettings } from '@/lib/storage';
 import { THEMES } from '@/lib/theme';
-import { Type } from 'lucide-react';
+import { Type, Headphones } from 'lucide-react';
 import { Modal } from './Modal';
 
 interface ReaderSettingsModalProps {
@@ -11,6 +11,8 @@ interface ReaderSettingsModalProps {
   onClose: () => void;
   settings: ReaderSettings;
   onUpdateSettings: (newSettings: Partial<ReaderSettings>) => void;
+  onToggleTts?: () => void;
+  isTtsActive?: boolean;
 }
 
 export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
@@ -18,6 +20,8 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
   onClose,
   settings,
   onUpdateSettings,
+  onToggleTts,
+  isTtsActive = false,
 }) => {
   const fonts: { id: ReaderSettings['fontFamily']; label: string }[] = [
     { id: 'serif', label: '衬线宋体' },
@@ -125,6 +129,9 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
             <div className="text-[11px] text-zinc-400 font-mono">阅读接近尾声时自动拉取并解析下一章</div>
           </div>
           <button
+            role="switch"
+            aria-checked={Boolean(settings.autoPreloadNext)}
+            aria-label="自动预载下一章"
             onClick={() => onUpdateSettings({ autoPreloadNext: !settings.autoPreloadNext })}
             className={`w-11 h-6 rounded-full transition-colors relative ${
               settings.autoPreloadNext ? 'bg-zinc-900 dark:bg-zinc-100' : 'bg-zinc-300 dark:bg-zinc-700'
@@ -137,6 +144,36 @@ export const ReaderSettingsModal: React.FC<ReaderSettingsModalProps> = ({
             />
           </button>
         </div>
+
+        {/* TTS Voice Reading Section */}
+        {onToggleTts && (
+          <div className="flex items-center justify-between pt-3 border-t border-zinc-100 dark:border-zinc-800">
+            <div>
+              <div className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                <Headphones className="w-3.5 h-3.5 text-zinc-700 dark:text-zinc-300" />
+                <span>语音朗读（听书）</span>
+              </div>
+              <div className="text-[11px] text-zinc-400 font-mono">
+                {isTtsActive ? '听书面板已开启，可在浮层控制播放' : '使用浏览器语音合成逐段朗读当前章节'}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                onToggleTts();
+                onClose();
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 shrink-0 ${
+                isTtsActive
+                  ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-300 dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700'
+                  : 'bg-black text-white hover:bg-zinc-800 shadow-xs'
+              }`}
+            >
+              <Headphones className="w-3.5 h-3.5" />
+              <span>{isTtsActive ? '关闭听书' : '开启听书'}</span>
+            </button>
+          </div>
+        )}
       </div>
     </Modal>
   );

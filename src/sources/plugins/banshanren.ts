@@ -154,7 +154,15 @@ export class BanshanrenSource implements BookSource {
       const intro = $('div.novel_intro_box p').first().text().trim();
       const category = $('ul.category_list li a').first().attr('title') || '';
       const latestChapter = $('div.catalog_top_box span.hl').first().text().trim();
-      const updateTime = $('div.catalog_top_box p').last().text().trim();
+      let updateTime = $('div.catalog_top_box p').last().text().trim();
+      const dotMatch = updateTime.match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})$/);
+      if (dotMatch) {
+        // Banshanren template renders YYYY.DD.MM (e.g. 2026.15.09 for Sep 15, 2026)
+        const y = dotMatch[1];
+        const d = dotMatch[2].padStart(2, '0');
+        const m = dotMatch[3].padStart(2, '0');
+        updateTime = `${y}-${m}-${d}`;
+      }
 
       // Status and word count only appear in the meta description, not in the rendered DOM.
       const metaDesc = $('meta[name="description"]').attr('content') || '';

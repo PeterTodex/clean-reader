@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Bookshelf } from '@/components/Bookshelf';
+import { SearchModal } from '@/components/SearchModal';
 import { BookCoverPlaceholder } from '@/components/BookCoverPlaceholder';
 import { BookshelfItem, HistoryItem, storage } from '@/lib/storage';
 import {
@@ -47,6 +48,7 @@ function BookshelfContent() {
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [shelfBookIds, setShelfBookIds] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
 
   const loadData = () => {
     const shelf = storage.getBookshelf();
@@ -59,6 +61,14 @@ function BookshelfContent() {
 
   useEffect(() => {
     loadData();
+  }, [activeTab]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      loadData();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   // Sync tab change with URL without full reload
@@ -106,7 +116,7 @@ function BookshelfContent() {
 
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-200">
-      <Header onSearchFocus={() => router.push('/')} />
+      <Header onSearchClick={() => setShowSearchModal(true)} />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 sm:py-10 space-y-8">
         {/* Page Header with Minimal Tabs */}
@@ -164,39 +174,20 @@ function BookshelfContent() {
             </div>
           </div>
 
-          {/* Action Bar */}
-          <div className="flex items-center gap-2">
-            <Link
-              href="/"
-              className="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors flex items-center gap-1.5"
-            >
-              <Search className="w-3.5 h-3.5" />
-              <span>发现新书</span>
-            </Link>
-
-            {activeTab === 'shelf' ? (
+          {/* Action Bar: Only shows clear history when on history tab with items */}
+          {activeTab === 'history' && historyItems.length > 0 && (
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={loadData}
-                className="p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors"
-                title="刷新藏书"
+                onClick={handleClearHistory}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors flex items-center gap-1"
+                title="清空全部阅读足迹"
               >
-                <RefreshCw className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>清空</span>
               </button>
-            ) : (
-              historyItems.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleClearHistory}
-                  className="px-3 py-1.5 text-xs font-medium rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors flex items-center gap-1"
-                  title="清空全部阅读足迹"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>清空</span>
-                </button>
-              )
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Tab 1: Bookshelf Content */}
@@ -204,7 +195,7 @@ function BookshelfContent() {
           <Bookshelf
             items={shelfItems}
             onRefresh={loadData}
-            onOpenSearch={() => router.push('/')}
+            onOpenSearch={() => setShowSearchModal(true)}
           />
         )}
 
@@ -337,6 +328,15 @@ function BookshelfContent() {
           )
         )}
       </main>
+
+      {/* Search Modal */}
+      <SearchModal
+        isOpen={showSearchModal}
+        onClose={() => {
+          setShowSearchModal(false);
+          loadData();
+        }}
+      />
     </div>
   );
 }
